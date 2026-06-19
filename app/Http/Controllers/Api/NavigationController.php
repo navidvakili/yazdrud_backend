@@ -70,14 +70,11 @@ class NavigationController extends Controller
     {
         $user = $request->user();
 
-        // Collect all roles: primary role + roles from the roles table
-        $primaryRole = $user->role;
-        $roles = array_values($user->roles);
-        if (!in_array($primaryRole, $roles)) {
-            $roles[] = $primaryRole;
-        }
+        // Only use the current active role (user.role) — like old Navigation::links()
+        // This ensures menus change when the user switches role.
+        $currentRole = $user->role;
 
-        $links = $this->buildMenu($roles);
+        $links = $this->buildMenu([$currentRole]);
 
         return response()->json([
             'data' => $links,
@@ -123,20 +120,14 @@ class NavigationController extends Controller
     public function permissions(Request $request): JsonResponse
     {
         $user = $request->user();
-        $primaryRole = $user->role;
-        $roles = array_values($user->roles);
-        if (!in_array($primaryRole, $roles)) {
-            $roles[] = $primaryRole;
-        }
+        $currentRole = $user->role;
 
-        // Get all access items matching the user's roles (both top-level and children)
-        $allAccesses = Access::where(function ($query) use ($roles) {
-                foreach ($roles as $role) {
-                    $query->orWhere('roles', 'like', '%|' . $role . '|%')
-                        ->orWhere('roles', 'like', $role . '|%')
-                        ->orWhere('roles', 'like', '%|' . $role)
-                        ->orWhere('roles', $role);
-                }
+        // Get all access items matching the user's current active role
+        $allAccesses = Access::where(function ($query) use ($currentRole) {
+                $query->where('roles', 'like', '%|' . $currentRole . '|%')
+                    ->orWhere('roles', 'like', $currentRole . '|%')
+                    ->orWhere('roles', 'like', '%|' . $currentRole)
+                    ->orWhere('roles', $currentRole);
             })
             ->where('active', 1)
             ->orderBy('parent', 'asc')
