@@ -1,16 +1,19 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "portal/backend",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Portal Backend API - Modernized Laravel API with Passport authentication.",
     "keywords": [
+        "portal",
         "laravel",
-        "framework"
+        "api",
+        "passport"
     ],
     "license": "MIT",
     "require": {
         "php": "^8.3",
         "laravel/framework": "^13.8",
+        "laravel/passport": "^13.7",
         "laravel/tinker": "^3.0"
     },
     "require-dev": {
@@ -35,17 +38,9 @@
         }
     },
     "scripts": {
-        "setup": [
-            "composer install",
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php artisan key:generate",
-            "@php artisan migrate --force",
-            "npm install --ignore-scripts",
-            "npm run build"
-        ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
+            "php artisan serve --host=0.0.0.0 --port=8000"
         ],
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
