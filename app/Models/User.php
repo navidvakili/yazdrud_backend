@@ -101,7 +101,7 @@ class User extends Authenticatable
 
     public function teacher()
     {
-        return $this->hasOne(Student::class, 'id_ostad', 'username');
+        return $this->hasOne(Teacher::class, 'id_ostad', 'username');
     }
 
     public function fields()
