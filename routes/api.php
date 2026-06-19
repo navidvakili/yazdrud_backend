@@ -30,4 +30,9 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::put('/user/profile', [AuthController::class, 'updateProfile']);
     Route::put('/user/password', [AuthController::class, 'updatePassword']);
+
+    // ==================== Navigation & Permissions ====================
+    Route::get('/navigation', [\App\Http\Controllers\Api\NavigationController::class, 'index']);
+    Route::get('/user/roles', [\App\Http\Controllers\Api\NavigationController::class, 'roles']);
+    Route::get('/user/permissions', [\App\Http\Controllers\Api\NavigationController::class, 'permissions']);
 });
