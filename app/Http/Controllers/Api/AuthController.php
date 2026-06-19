@@ -250,6 +250,42 @@ class AuthController extends Controller
     }
 
     /**
+     * Switch the user's active (primary) role.
+     * The role must exist in the user's roles table.
+     */
+    public function switchRole(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'role' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $newRole = $request->input('role');
+
+        // Verify the user has this role in their roles table
+        $roles = $user->roles;
+        if (!in_array($newRole, $roles)) {
+            return response()->json([
+                'message' => 'شما به این نقش دسترسی ندارید',
+            ], 403);
+        }
+
+        // Update the primary role
+        $user->role = $newRole;
+        $user->save();
+
+        return response()->json([
+            'message' => 'نقش کاربری با موفقیت تغییر یافت',
+            'data' => $this->formatUser($user->fresh()),
+        ]);
+    }
+
+    /**
      * Format user data for API response.
      */
     private function formatUser(User $user): array

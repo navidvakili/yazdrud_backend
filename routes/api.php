@@ -30,6 +30,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::put('/user/profile', [AuthController::class, 'updateProfile']);
     Route::put('/user/password', [AuthController::class, 'updatePassword']);
+    Route::put('/user/switch-role', [AuthController::class, 'switchRole']);
 
     // ==================== Navigation & Permissions ====================
     Route::get('/navigation', [\App\Http\Controllers\Api\NavigationController::class, 'index']);
