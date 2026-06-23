@@ -14,17 +14,17 @@ return new class extends Migration
     {
         // oauth_access_tokens
         Schema::table('oauth_access_tokens', function (Blueprint $table) {
-            $table->string('user_id', 255)->nullable()->change();
+            $table->string('user_id', 191)->nullable()->change();
         });
 
         // oauth_auth_codes
         Schema::table('oauth_auth_codes', function (Blueprint $table) {
-            $table->string('user_id', 255)->change();
+            $table->string('user_id', 191)->change();
         });
 
         // oauth_device_codes
         Schema::table('oauth_device_codes', function (Blueprint $table) {
-            $table->string('user_id', 255)->nullable()->change();
+            $table->string('user_id', 191)->nullable()->change();
         });
     }
 
