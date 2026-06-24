@@ -21,6 +21,8 @@ class CourseController extends Controller
     {
         return [
             'id'               => $course->id,
+            'group_id'         => $course->group_id,
+            'group_title'      => $course->group?->title,
             'title'            => $course->title,
             'amount'           => $course->amount,
             'amount_formatted' => number_format(intval($course->amount)),
@@ -80,7 +82,12 @@ class CourseController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Course::query();
+        $query = Course::query()->with('group');
+
+        // Filter by group
+        if ($request->has('group_id')) {
+            $query->where('group_id', $request->integer('group_id'));
+        }
 
         // Filter by active status
         if ($request->has('active')) {
@@ -149,6 +156,7 @@ class CourseController extends Controller
             'syllabus'    => 'nullable|string',
             'duration'    => 'nullable|integer|min:0',
             'instructor'  => 'nullable|string|max:255',
+            'group_id'    => 'nullable|integer|exists:course_groups,id',
             'start_date'  => 'nullable|date_format:Y/m/d',
             'end_date'    => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
             'capacity'    => 'nullable|integer|min:0',
@@ -159,6 +167,7 @@ class CourseController extends Controller
         }
 
         $course = new Course();
+        $course->group_id    = $request->group_id;
         $course->title       = $request->title;
         $course->amount      = str_replace(',', '', (string) $request->amount);
         $course->active      = filter_var($request->active, FILTER_VALIDATE_BOOLEAN);
@@ -209,6 +218,7 @@ class CourseController extends Controller
             'syllabus'    => 'nullable|string',
             'duration'    => 'nullable|integer|min:0',
             'instructor'  => 'nullable|string|max:255',
+            'group_id'    => 'nullable|integer|exists:course_groups,id',
             'start_date'  => 'nullable|date_format:Y/m/d',
             'end_date'    => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
             'capacity'    => 'nullable|integer|min:0',
@@ -238,6 +248,9 @@ class CourseController extends Controller
         }
         if ($request->has('instructor')) {
             $course->instructor = $request->instructor;
+        }
+        if ($request->has('group_id')) {
+            $course->group_id = $request->group_id;
         }
         if ($request->has('start_date')) {
             $course->start_date = $request->start_date ? date('Y-m-d', strtotime($request->start_date)) : null;

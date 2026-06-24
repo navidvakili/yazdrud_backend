@@ -10,6 +10,7 @@ class Course extends Model
     use HasFactory;
 
     protected $fillable = [
+        'group_id',
         'title',
         'amount',
         'active',
@@ -30,6 +31,14 @@ class Course extends Model
         'end_date' => 'date',
         'amount' => 'string',
     ];
+
+    /**
+     * Get the group that this course belongs to.
+     */
+    public function group()
+    {
+        return $this->belongsTo(CourseGroup::class, 'group_id');
+    }
 
     /**
      * Get the registrations for this course.
