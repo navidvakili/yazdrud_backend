@@ -4,6 +4,10 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -25,4 +29,41 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // Catch database / SQL errors and return a friendly message instead of exposing SQL details
+        $exceptions->render(function (QueryException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => 'خطایی در پردازش درخواست رخ داده است. لطفاً مجدداً تلاش کنید.',
+                ], 500);
+            }
+        });
+
+        // Catch 404 errors
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => 'مسیر درخواستی یافت نشد.',
+                ], 404);
+            }
+        });
+
+        // Catch general HTTP exceptions
+        $exceptions->render(function (HttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => 'خطایی در پردازش درخواست رخ داده است.',
+                ], $e->getStatusCode());
+            }
+        });
+
+        // Catch any other unhandled exception
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if ($request->is('api/*')) {
+                $statusCode = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
+                return response()->json([
+                    'message' => 'خطای داخلی سرور. لطفاً با پشتیبانی تماس بگیرید.',
+                ], $statusCode >= 400 && $statusCode < 600 ? $statusCode : 500);
+            }
+        });
     })->create();

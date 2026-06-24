@@ -40,6 +40,13 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/user/roles', [\App\Http\Controllers\Api\NavigationController::class, 'roles']);
     Route::get('/user/permissions', [\App\Http\Controllers\Api\NavigationController::class, 'permissions']);
 
+    // ==================== Dashboard (پین‌ها و داشبورد) ====================
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/pinned-menus', [\App\Http\Controllers\Api\DashboardController::class, 'pinnedMenus']);
+        Route::post('/pin', [\App\Http\Controllers\Api\DashboardController::class, 'pin']);
+        Route::post('/unpin', [\App\Http\Controllers\Api\DashboardController::class, 'unpin']);
+    });
+
     // ==================== Courses (دوره‌های آموزشی) ====================
     Route::prefix('courses')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\CourseController::class, 'index']);
