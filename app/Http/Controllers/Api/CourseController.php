@@ -19,6 +19,10 @@ class CourseController extends Controller
      */
     private function formatCourse(Course $course): array
     {
+        // Compute actual registration counts dynamically
+        $totalRegistrations = $course->registrations_count ?? $course->registrations()->count();
+        $confirmedCount = $course->confirmed_registrations_count ?? $course->confirmedRegistrations()->count();
+
         return [
             'id'               => $course->id,
             'group_id'         => $course->group_id,
@@ -36,7 +40,8 @@ class CourseController extends Controller
             'start_date'       => $course->start_date?->format('Y/m/d'),
             'end_date'         => $course->end_date?->format('Y/m/d'),
             'capacity'         => $course->capacity,
-            'registered_count' => $course->registered_count,
+            'registered_count' => $totalRegistrations,
+            'confirmed_count'  => $confirmedCount,
             'remaining'        => $course->remaining_capacity,
             'is_available'     => $course->isAvailable(),
             'created_at'       => $course->created_at?->format('Y/m/d H:i'),
@@ -49,6 +54,14 @@ class CourseController extends Controller
      */
     private function formatRegistration(Registertut $reg): array
     {
+        // Compute amount: for online payments use transaction price, for bank receipts use course amount
+        $amount = 0;
+        if ($reg->payment_method === 'online') {
+            $amount = intval($reg->payment?->transaction?->price ?? 0);
+        } else {
+            $amount = intval($reg->course?->amount ?? 0);
+        }
+
         return [
             'id'               => $reg->id,
             'kodmeli'          => $reg->kodmeli,
@@ -63,13 +76,21 @@ class CourseController extends Controller
             'payment_method'   => $reg->payment_method,
             'payment_method_text' => $reg->payment_method === 'online' ? 'پرداخت آنلاین' : 'فیش بانکی',
             'bank_receipt'     => $reg->bank_receipt ? asset('storage/' . $reg->bank_receipt) : null,
+            'bank_receipt_filename' => $reg->bank_receipt,
             'status'           => $reg->actual_status,
             'status_text'      => $reg->actual_status_text,
+            'amount'           => $amount,
+            'amount_formatted' => number_format($amount),
             'verified_receipt' => (bool) $reg->verified_receipt,
             'rejected_receipt' => (bool) $reg->rejected_receipt,
             'rejection_reason' => $reg->rejection_reason,
             'certificate_approved' => (bool) $reg->certificate_approved,
             'created_at'       => $reg->created_at?->format('Y/m/d H:i'),
+            'verified_at'      => $reg->verified_at?->format('Y/m/d H:i'),
+            'tracking_code'    => $reg->payment?->transaction?->tracking_code,
+            'ref_id'           => $reg->payment?->transaction?->ref_id,
+            'card_number'      => $reg->payment?->transaction?->card_number,
+            'port'             => $reg->payment?->transaction?->port,
         ];
     }
 
@@ -82,7 +103,12 @@ class CourseController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Course::query()->with('group');
+        $query = Course::query()
+            ->with('group')
+            ->withCount([
+                'registrations',
+                'confirmedRegistrations as confirmed_registrations_count',
+            ]);
 
         // Filter by group
         if ($request->has('group_id')) {
@@ -132,7 +158,10 @@ class CourseController extends Controller
      */
     public function show($id): JsonResponse
     {
-        $course = Course::find($id);
+        $course = Course::withCount([
+            'registrations',
+            'confirmedRegistrations as confirmed_registrations_count',
+        ])->find($id);
         if (!$course) {
             return response()->json(['message' => 'دوره آموزشی مورد نظر یافت نشد'], 404);
         }
@@ -343,7 +372,15 @@ class CourseController extends Controller
             return response()->json(['message' => 'دوره آموزشی مورد نظر یافت نشد'], 404);
         }
 
-        $registrations = Registertut::where('course_id', $courseId)
+        $registrations = Registertut::with(['course', 'payment.transaction'])
+            ->where('course_id', $courseId)
+            ->where(function ($q) {
+                // For online payments, only include if transaction is SUCCEED
+                $q->where('payment_method', '!=', 'online')
+                  ->orWhereHas('payment.transaction', function ($q2) {
+                      $q2->where('status', 'SUCCEED');
+                  });
+            })
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -359,7 +396,7 @@ class CourseController extends Controller
      */
     public function allRegistrations(Request $request): JsonResponse
     {
-        $query = Registertut::with('course');
+        $query = Registertut::with(['course', 'payment.transaction']);
 
         // Filter by course
         if ($request->filled('course_id')) {
