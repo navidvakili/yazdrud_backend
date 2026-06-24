@@ -186,6 +186,32 @@ class AuthController extends Controller
     }
 
     /**
+     * Verify user password (for standby unlock).
+     */
+    public function verifyPassword(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'رمز عبور نادرست است',
+            ], 403);
+        }
+
+        return response()->json([
+            'message' => 'رمز عبور صحیح است',
+        ]);
+    }
+
+    /**
      * Send password reset link.
      */
     public function forgotPassword(Request $request): JsonResponse

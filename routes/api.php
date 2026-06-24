@@ -35,6 +35,7 @@ Route::middleware('auth:api')->group(function () {
     Route::put('/user/password', [AuthController::class, 'updatePassword']);
     Route::put('/user/switch-role', [AuthController::class, 'switchRole']);
     Route::put('/user/theme', [AuthController::class, 'updateTheme']);
+    Route::post('/user/verify-password', [AuthController::class, 'verifyPassword']);
 
     // ==================== Navigation & Permissions ====================
     Route::get('/navigation', [\App\Http\Controllers\Api\NavigationController::class, 'index']);
