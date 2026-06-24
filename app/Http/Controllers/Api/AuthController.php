@@ -286,6 +286,31 @@ class AuthController extends Controller
     }
 
     /**
+     * Update user theme preference.
+     */
+    public function updateTheme(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'theme' => 'required|string|in:light,dark',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user->update([
+            'theme' => $request->input('theme'),
+        ]);
+
+        return response()->json([
+            'message' => 'تم با موفقیت ذخیره شد',
+            'data' => $this->formatUser($user->fresh()),
+        ]);
+    }
+
+    /**
      * Format user data for API response.
      */
     private function formatUser(User $user): array
@@ -301,6 +326,7 @@ class AuthController extends Controller
             'role' => $user->role,
             'roles' => $user->roles,
             'sign' => $user->sign,
+            'theme' => $user->theme,
             'has_student_profile' => $user->student()->exists(),
             'has_teacher_profile' => $user->teacher()->exists(),
             'has_phd_profile' => $user->phd()->exists(),
