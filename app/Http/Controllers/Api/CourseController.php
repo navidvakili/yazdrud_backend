@@ -11,6 +11,7 @@ use App\Models\RegistertutsPayment;
 use Hekmatinasser\Verta\Verta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -550,12 +551,19 @@ class CourseController extends Controller
      */
     public function statistics(): JsonResponse
     {
-        $totalCourses = Course::count();
         $activeCourses = Course::where('active', true)->count();
         $totalRegistrations = Registertut::count();
-        $pendingReceipts = Registertut::where('payment_method', 'bank')
-            ->where('verified_receipt', false)
-            ->where('rejected_receipt', false)
+
+        // Verified registrations (online paid + bank verified)
+        $verifiedCount = Registertut::where(function ($q) {
+                $q->where('verified_receipt', true)
+                  ->orWhere(function ($q2) {
+                      $q2->where('payment_method', 'online')
+                         ->whereHas('payment.transaction', function ($q3) {
+                             $q3->where('status', 'SUCCEED');
+                         });
+                  });
+            })
             ->count();
 
         // Registration stats by course
@@ -573,12 +581,15 @@ class CourseController extends Controller
 
         return response()->json([
             'data' => [
-                'total_courses'       => $totalCourses,
                 'active_courses'      => $activeCourses,
                 'total_registrations' => $totalRegistrations,
-                'pending_receipts'    => $pendingReceipts,
+                'verified_count'      => $verifiedCount,
                 'top_courses'         => $topCourses,
             ],
         ]);
     }
+
+    // ========================================================================
+    // Registration Stats
+    // ========================================================================
 }
