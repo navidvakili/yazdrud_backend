@@ -247,30 +247,39 @@ class CertificateController extends Controller
             return response()->json(['message' => 'این ثبت‌نام توسط مدیر تایید نشده است.'], 422);
         }
 
-        $certificate = $registration->certificate;
-        if (!$certificate) {
-            $certificate = Certificate::create([
-                'register_id'        => $registration->id,
-                'certificate_number' => Certificate::generateCertificateNumber($registration->course_id, $registration->id),
-                'issued_at'          => Carbon::now(),
-            ]);
+        DB::beginTransaction();
+        try {
+            $certificate = $registration->certificate;
+            if (!$certificate) {
+                $certificate = Certificate::create([
+                    'register_id'        => $registration->id,
+                    'certificate_number' => Certificate::generateCertificateNumber($registration->course_id, $registration->id),
+                    'issued_at'          => Carbon::now(),
+                ]);
+            }
+
+            $data = $this->buildCertificateData($registration, $certificate);
+
+            $config = [
+                'orientation'    => 'L',
+                'format'         => 'A4-L',
+                'mode'           => 'utf-8',
+                'default_font'   => 'btitr',
+                'margin_left'    => 0,
+                'margin_right'   => 0,
+                'margin_top'     => 0,
+                'margin_bottom'  => 0,
+            ];
+            $pdf = LaravelMpdf::loadView('certificates.pdf', $data, [], $config);
+
+            DB::commit();
+
+            return $pdf->stream('certificate_' . $certificate->certificate_number . '.pdf');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'خطا در بارگذاری گواهی: ' . $e->getMessage()], 500);
         }
-
-        $data = $this->buildCertificateData($registration, $certificate);
-
-        $config = [
-            'orientation'    => 'L',
-            'format'         => 'A4-L',
-            'mode'           => 'utf-8',
-            'default_font'   => 'btitr',
-            'margin_left'    => 0,
-            'margin_right'   => 0,
-            'margin_top'     => 0,
-            'margin_bottom'  => 0,
-        ];
-        $pdf = LaravelMpdf::loadView('certificates.pdf', $data, [], $config);
-
-        return $pdf->stream('certificate_' . $certificate->certificate_number . '.pdf');
     }
 
 
