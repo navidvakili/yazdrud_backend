@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Library\Crypt;
 use App\Models\Registertut;
 use App\Models\GatewayTransaction;
 use App\Models\RegistertutsPayment;
@@ -63,7 +64,7 @@ class CourseController extends Controller
         }
 
         return [
-            'id'               => $reg->id,
+            'id'               => Crypt::encryptor('encrypt', $reg->id),
             'kodmeli'          => $reg->kodmeli,
             'course_id'        => $reg->course_id,
             'course_title'     => $reg->course?->title,

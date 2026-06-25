@@ -26,6 +26,12 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 // Public survey submission (no auth required)
 Route::post('/surveys', [\App\Http\Controllers\Api\SurveyController::class, 'store']);
 
+// Public certificate verification (no auth required)
+Route::get('/certificates/verify/{encryptedNumber}', [\App\Http\Controllers\Api\CertificateController::class, 'verify'])->name('certificates.verify');
+
+// Public certificate PDF display via token query param (for iframe dialog — no CORS)
+Route::get('/certificates/public-view/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'publicView']);
+
 // ==================== Authenticated Routes ====================
 Route::middleware('auth:api')->group(function () {
     // Current user
@@ -88,5 +94,17 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/', [\App\Http\Controllers\Api\CourseGroupController::class, 'store']);
         Route::put('/{id}', [\App\Http\Controllers\Api\CourseGroupController::class, 'update']);
         Route::delete('/{id}', [\App\Http\Controllers\Api\CourseGroupController::class, 'destroy']);
+    });
+
+    // ==================== Certificates (صدور گواهی دوره‌ها) ====================
+    Route::prefix('certificates')->group(function () {
+        // Static routes MUST come before parameterized routes
+        Route::get('/', [\App\Http\Controllers\Api\CertificateController::class, 'index']);
+        Route::post('/approve-all', [\App\Http\Controllers\Api\CertificateController::class, 'approveAll']);
+        Route::get('/download-all', [\App\Http\Controllers\Api\CertificateController::class, 'downloadAll']);
+        Route::post('/approve/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'approve']);
+        Route::post('/reject/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'reject']);
+        Route::get('/generate/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'generate']);
+        Route::get('/preview/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'preview']);
     });
 });

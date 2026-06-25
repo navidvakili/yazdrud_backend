@@ -21,9 +21,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'scope' => \Laravel\Passport\Http\Middleware\CheckForAnyScope::class,
         ]);
 
-        $middleware->api(prepend: [
-            \Illuminate\Http\Middleware\HandleCors::class,
-        ]);
+        // Global middleware — CORS handled before any route matching,
+        // so OPTIONS preflight requests get proper headers even for auth-protected routes.
+        $middleware->prepend(\App\Http\Middleware\CorsMiddleware::class);
+
+        // Remove the default HandleCors (from Laravel framework) to avoid duplicate CORS processing
+        $middleware->remove(\Illuminate\Http\Middleware\HandleCors::class);
+
+        // For API routes, don't redirect to a "login" route on auth failure — return 401 JSON instead
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
