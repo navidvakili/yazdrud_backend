@@ -140,18 +140,18 @@
     <div class="bottom-row">
         <table style="width:100%">
             <tr>
+                <td style="width: 34%; text-align:center;">
+                    <div class="qrcode-area">
+                        {!! preg_replace('/<\?xml.*?\?>/', '', $qrCode) !!}
+                        <div class="qrcode-label">رمزینه اصالت گواهی</div>
+                    </div>
+                </td>
+                <td style="width: 33%;"></td>
                 <td style="width: 33%; text-align:center;">
                     <div class="signature-area">
                         <div class="sig-line"></div>
                         <div class="sig-name">دکتر جواد آقاجانی</div>
                         <div class="sig-title">معاون پژوهشی دانشگاه</div>
-                    </div>
-                </td>
-                <td style="width: 33%;"></td>
-                <td style="width: 34%; text-align:center;">
-                    <div class="qrcode-area">
-                        {!! preg_replace('/<\?xml.*?\?>/', '', $qrCode) !!}
-                        <div class="qrcode-label">رمزینه اصالت گواهی</div>
                     </div>
                 </td>
             </tr>
