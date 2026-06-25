@@ -113,6 +113,7 @@ class CertificateController extends Controller
      */
     public function approve($registerId): JsonResponse
     {
+        $registerId = Crypt::encryptor('decrypt', $registerId);
         $registration = Registertut::findOrFail($registerId);
 
         $registration->certificate_approved     = true;
@@ -131,6 +132,7 @@ class CertificateController extends Controller
      */
     public function reject($registerId): JsonResponse
     {
+        $registerId = Crypt::encryptor('decrypt', $registerId);
         $registration = Registertut::findOrFail($registerId);
 
         $registration->certificate_approved     = false;

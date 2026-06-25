@@ -104,7 +104,5 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/download-all', [\App\Http\Controllers\Api\CertificateController::class, 'downloadAll']);
         Route::post('/approve/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'approve']);
         Route::post('/reject/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'reject']);
-        Route::get('/generate/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'generate']);
-        Route::get('/preview/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'preview']);
     });
 });
