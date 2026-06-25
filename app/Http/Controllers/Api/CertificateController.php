@@ -249,7 +249,11 @@ class CertificateController extends Controller
 
         $certificate = $registration->certificate;
         if (!$certificate) {
-            return response()->json(['message' => 'برای این ثبت‌نام هنوز گواهی صادر نشده است. ابتدا گواهی را صادر کنید.'], 422);
+            $certificate = Certificate::create([
+                'register_id'        => $registration->id,
+                'certificate_number' => Certificate::generateCertificateNumber($registration->course_id, $registration->id),
+                'issued_at'          => Carbon::now(),
+            ]);
         }
 
         $data = $this->buildCertificateData($registration, $certificate);
