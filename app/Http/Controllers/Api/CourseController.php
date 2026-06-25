@@ -416,6 +416,17 @@ class CourseController extends Controller
             $query->where('course_id', $request->course_id);
         }
 
+        // Search by name, kodmeli, mobile, id_edu
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('fullname', 'like', "%{$search}%")
+                  ->orWhere('kodmeli', 'like', "%{$search}%")
+                  ->orWhere('mobile', 'like', "%{$search}%")
+                  ->orWhere('id_edu', 'like', "%{$search}%");
+            });
+        }
+
         // Filter by status
         if ($request->filled('status')) {
             // For bank receipt status
