@@ -59,7 +59,8 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('courses')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\CourseController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Api\CourseController::class, 'store']);
-        Route::get('/statistics', [\App\Http\Controllers\Api\CourseController::class, 'statistics']);
+        Route::get('/statistics', [\App\Http\Controllers\Api\CourseStatisticsController::class, 'statistics']);
+        Route::get('/statistics/detailed', [\App\Http\Controllers\Api\CourseStatisticsController::class, 'index']);
         Route::get('/registrations', [\App\Http\Controllers\Api\CourseController::class, 'allRegistrations']);
         Route::get('/{id}', [\App\Http\Controllers\Api\CourseController::class, 'show']);
         Route::put('/{id}', [\App\Http\Controllers\Api\CourseController::class, 'update']);

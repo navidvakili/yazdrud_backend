@@ -6,12 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Library\Crypt;
 use App\Models\Registertut;
-use App\Models\GatewayTransaction;
-use App\Models\RegistertutsPayment;
 use Hekmatinasser\Verta\Verta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -541,55 +538,4 @@ class CourseController extends Controller
             'data'    => $this->formatRegistration($reg),
         ]);
     }
-
-    // ========================================================================
-    // Registration Stats
-    // ========================================================================
-
-    /**
-     * Get statistics for courses and registrations.
-     */
-    public function statistics(): JsonResponse
-    {
-        $activeCourses = Course::where('active', true)->count();
-        $totalRegistrations = Registertut::count();
-
-        // Verified registrations (online paid + bank verified)
-        $verifiedCount = Registertut::where(function ($q) {
-                $q->where('verified_receipt', true)
-                  ->orWhere(function ($q2) {
-                      $q2->where('payment_method', 'online')
-                         ->whereHas('payment.transaction', function ($q3) {
-                             $q3->where('status', 'SUCCEED');
-                         });
-                  });
-            })
-            ->count();
-
-        // Registration stats by course
-        $topCourses = Course::withCount('registrations')
-            ->orderBy('registrations_count', 'desc')
-            ->take(5)
-            ->get()
-            ->map(function ($course) {
-                return [
-                    'id'    => $course->id,
-                    'title' => $course->title,
-                    'count' => $course->registrations_count,
-                ];
-            });
-
-        return response()->json([
-            'data' => [
-                'active_courses'      => $activeCourses,
-                'total_registrations' => $totalRegistrations,
-                'verified_count'      => $verifiedCount,
-                'top_courses'         => $topCourses,
-            ],
-        ]);
-    }
-
-    // ========================================================================
-    // Registration Stats
-    // ========================================================================
 }
