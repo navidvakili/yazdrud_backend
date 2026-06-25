@@ -8,6 +8,7 @@ use App\Library\Crypt;
 use App\Models\Registertut;
 use App\Models\GatewayTransaction;
 use App\Models\RegistertutsPayment;
+use Hekmatinasser\Verta\Verta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +16,19 @@ use Illuminate\Support\Facades\Validator;
 
 class CourseController extends Controller
 {
+    /**
+     * Convert a date to Jalali (Shamsi) format using Verta.
+     */
+    private function toJalali($date, string $format = 'Y/m/d'): ?string
+    {
+        if (!$date) return null;
+        try {
+            return (new Verta($date))->format($format);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
     /**
      * Format a course for API response.
      */
@@ -38,15 +52,15 @@ class CourseController extends Controller
             'duration'         => $course->duration,
             'duration_text'    => $course->duration ? "{$course->duration} ساعت" : null,
             'instructor'       => $course->instructor,
-            'start_date'       => $course->start_date?->format('Y/m/d'),
-            'end_date'         => $course->end_date?->format('Y/m/d'),
+            'start_date'       => $this->toJalali($course->start_date),
+            'end_date'         => $this->toJalali($course->end_date),
             'capacity'         => $course->capacity,
             'registered_count' => $totalRegistrations,
             'confirmed_count'  => $confirmedCount,
             'remaining'        => $course->remaining_capacity,
             'is_available'     => $course->isAvailable(),
-            'created_at'       => $course->created_at?->format('Y/m/d H:i'),
-            'updated_at'       => $course->updated_at?->format('Y/m/d H:i'),
+            'created_at'       => $this->toJalali($course->created_at, 'Y/m/d H:i'),
+            'updated_at'       => $this->toJalali($course->updated_at, 'Y/m/d H:i'),
         ];
     }
 
@@ -86,8 +100,8 @@ class CourseController extends Controller
             'rejected_receipt' => (bool) $reg->rejected_receipt,
             'rejection_reason' => $reg->rejection_reason,
             'certificate_approved' => (bool) $reg->certificate_approved,
-            'created_at'       => $reg->created_at?->format('Y/m/d H:i'),
-            'verified_at'      => $reg->verified_at?->format('Y/m/d H:i'),
+            'created_at'       => $this->toJalali($reg->created_at, 'Y/m/d H:i'),
+            'verified_at'      => $this->toJalali($reg->verified_at, 'Y/m/d H:i'),
             'tracking_code'    => $reg->payment?->transaction?->tracking_code,
             'ref_id'           => $reg->payment?->transaction?->ref_id,
             'card_number'      => $reg->payment?->transaction?->card_number,
@@ -408,6 +422,18 @@ class CourseController extends Controller
         if ($request->filled('status')) {
             // For bank receipt status
             switch ($request->status) {
+                case 'verified':
+                    // Both online paid and bank receipt approved
+                    $query->where(function ($q) {
+                        $q->where('verified_receipt', true)
+                          ->orWhere(function ($q2) {
+                              $q2->where('payment_method', 'online')
+                                 ->whereHas('payment.transaction', function ($q3) {
+                                     $q3->where('status', 'SUCCEED');
+                                 });
+                          });
+                    });
+                    break;
                 case 'pending':
                     $query->where('payment_method', 'bank')
                         ->where('verified_receipt', false)
