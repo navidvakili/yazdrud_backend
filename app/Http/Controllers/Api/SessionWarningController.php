@@ -107,11 +107,6 @@ class SessionWarningController extends Controller
         $warning->status = $request->status;
         $warning->save();
 
-        // If accepted, revoke old tokens so the new session can login
-        if ($request->status === 'accepted') {
-            $request->user()->tokens()->where('name', 'portal-api')->delete();
-        }
-
         return response()->json([
             'message' => $request->status === 'accepted'
                 ? 'نشست موازی تأیید شد'

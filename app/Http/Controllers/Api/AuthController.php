@@ -46,8 +46,32 @@ class AuthController extends Controller
         }
 
         // Check for existing active sessions (concurrent login detection)
-        $activeTokensCount = $user->tokens()->where('name', 'portal-api')->count();
-        if ($activeTokensCount > 0 && !$request->boolean('force')) {
+        $existingTokens = $user->tokens()->where('name', 'portal-api')->get();
+        $currentFingerprint = $request->input('browser_fingerprint');
+        $trulyActiveTokens = collect();
+
+        foreach ($existingTokens as $token) {
+            $tokenFingerprint = $token->browser_fingerprint ?? null;
+
+            // If fingerprints match (same browser), auto-revoke orphaned token silently
+            if ($currentFingerprint && $tokenFingerprint && $tokenFingerprint === $currentFingerprint) {
+                $token->revoke();
+                continue;
+            }
+
+            // Token has no fingerprint OR different fingerprint — keep as potentially active
+            $trulyActiveTokens->push($token);
+        }
+
+        // If force=true, revoke all remaining tokens and proceed
+        if ($request->boolean('force')) {
+            foreach ($trulyActiveTokens as $token) {
+                $token->revoke();
+            }
+            $trulyActiveTokens = collect();
+        }
+
+        if ($trulyActiveTokens->isNotEmpty()) {
             return response()->json([
                 'message' => 'این کاربر در حال حاضر در یک دستگاه دیگر وارد شده است',
                 'has_active_session' => true,
