@@ -34,27 +34,32 @@ class CourseStatisticsController extends Controller
             return Verta::parse("{$y}/{$m}/01")->endMonth()->datetime();
         };
 
-        // Base query builder — joins gateway_transactions → registertuts_payments → registertuts → courses
+        // Base query builder — starts from registertuts, LEFT JOIN to payments & transactions
+        // This ensures bank receipt registrations (no gateway transaction) are included.
+        // For online payments, amount = gateway_transactions.price.
+        // For bank receipts, amount = courses.amount.
         $baseQuery = function ($startDate, $endDate, $cId) {
-            $q = DB::table('gateway_transactions')
-                ->join('registertuts_payments', 'registertuts_payments.transaction_id', '=', 'gateway_transactions.id')
-                ->join('registertuts', 'registertuts.id', '=', 'registertuts_payments.register_id')
+            $q = DB::table('registertuts')
+                ->leftJoin('registertuts_payments', 'registertuts_payments.register_id', '=', 'registertuts.id')
+                ->leftJoin('gateway_transactions', 'gateway_transactions.id', '=', 'registertuts_payments.transaction_id')
                 ->join('courses', 'registertuts.course_id', '=', 'courses.id')
                 ->select(
                     'gateway_transactions.id as transaction_id',
                     'gateway_transactions.status as gateway_status',
                     'gateway_transactions.price',
-                    'gateway_transactions.created_at',
+                    'gateway_transactions.created_at as transaction_created_at',
+                    DB::raw('CASE WHEN registertuts.payment_method = \'online\' THEN COALESCE(gateway_transactions.price, 0) ELSE CAST(COALESCE(courses.amount, 0) AS UNSIGNED) END as effective_price'),
                     'registertuts.id as register_id',
                     'registertuts.payment_method',
                     'registertuts.verified_receipt',
-                    'registertuts.course_id'
+                    'registertuts.course_id',
+                    'registertuts.created_at as register_created_at'
                 )
                 ->where(function ($w) {
                     $w->where('gateway_transactions.status', 'SUCCEED')
                       ->orWhere('registertuts.verified_receipt', true);
                 })
-                ->whereBetween('gateway_transactions.created_at', [$startDate, $endDate]);
+                ->whereBetween('registertuts.created_at', [$startDate, $endDate]);
 
             if ($cId) {
                 $q->where('registertuts.course_id', $cId);
@@ -73,7 +78,7 @@ class CourseStatisticsController extends Controller
             $bq = $baseQuery($startDate, $endDate, $courseId);
 
             $registeredCount = (clone $bq)->distinct('registertuts.id')->count('registertuts.id');
-            $totalAmount = (clone $bq)->sum('gateway_transactions.price');
+            $totalAmount = (clone $bq)->sum('effective_price');
 
             $onlinePayments = (clone $bq)
                 ->where('registertuts.payment_method', 'online')
@@ -118,7 +123,7 @@ class CourseStatisticsController extends Controller
                 'season_id'       => $sid,
                 'name'            => $season['name'],
                 'registered_count'=> (clone $sbq)->distinct('registertuts.id')->count('registertuts.id'),
-                'total_amount'    => intval((clone $sbq)->sum('gateway_transactions.price')),
+                'total_amount'    => intval((clone $sbq)->sum('effective_price')),
             ];
         }
 
@@ -134,7 +139,7 @@ class CourseStatisticsController extends Controller
             $yearlyStats[] = [
                 'year'            => $y,
                 'registered_count'=> (clone $ybq)->distinct('registertuts.id')->count('registertuts.id'),
-                'total_amount'    => intval((clone $ybq)->sum('gateway_transactions.price')),
+                'total_amount'    => intval((clone $ybq)->sum('effective_price')),
             ];
         }
         // Sort descending (newest first)
@@ -146,7 +151,7 @@ class CourseStatisticsController extends Controller
         $tbq = $baseQuery($yearStart, $yearEnd, $courseId);
 
         $totalRegistered = (clone $tbq)->distinct('registertuts.id')->count('registertuts.id');
-        $totalAmount     = intval((clone $tbq)->sum('gateway_transactions.price'));
+        $totalAmount     = intval((clone $tbq)->sum('effective_price'));
         $totalOnline     = (clone $tbq)
             ->where('registertuts.payment_method', 'online')
             ->where('gateway_transactions.status', 'SUCCEED')
