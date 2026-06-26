@@ -35,6 +35,7 @@ Route::get('/certificates/public-view/{registerId}', [\App\Http\Controllers\Api\
 // ==================== Session Warnings (Concurrent Login) ====================
 Route::post('/session-warnings', [\App\Http\Controllers\Api\SessionWarningController::class, 'store']);
 Route::get('/session-warnings/{id}/status', [\App\Http\Controllers\Api\SessionWarningController::class, 'status']);
+Route::post('/session-warnings/login', [\App\Http\Controllers\Api\SessionWarningController::class, 'login']);
 
 // ==================== Authenticated Routes ====================
 Route::middleware('auth:api')->group(function () {
