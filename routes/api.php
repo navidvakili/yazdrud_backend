@@ -32,6 +32,10 @@ Route::get('/certificates/verify/{encryptedNumber}', [\App\Http\Controllers\Api\
 // Public certificate PDF display via token query param (for iframe dialog — no CORS)
 Route::get('/certificates/public-view/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'publicView']);
 
+// ==================== Session Warnings (Concurrent Login) ====================
+Route::post('/session-warnings', [\App\Http\Controllers\Api\SessionWarningController::class, 'store']);
+Route::get('/session-warnings/{id}/status', [\App\Http\Controllers\Api\SessionWarningController::class, 'status']);
+
 // ==================== Authenticated Routes ====================
 Route::middleware('auth:api')->group(function () {
     // Current user
@@ -42,6 +46,10 @@ Route::middleware('auth:api')->group(function () {
     Route::put('/user/switch-role', [AuthController::class, 'switchRole']);
     Route::put('/user/theme', [AuthController::class, 'updateTheme']);
     Route::post('/user/verify-password', [AuthController::class, 'verifyPassword']);
+
+    // ==================== Session Warnings (Concurrent Login) ====================
+    Route::get('/session-warnings/pending', [\App\Http\Controllers\Api\SessionWarningController::class, 'pending']);
+    Route::post('/session-warnings/{id}/respond', [\App\Http\Controllers\Api\SessionWarningController::class, 'respond']);
 
     // ==================== Navigation & Permissions ====================
     Route::get('/navigation', [\App\Http\Controllers\Api\NavigationController::class, 'index']);
