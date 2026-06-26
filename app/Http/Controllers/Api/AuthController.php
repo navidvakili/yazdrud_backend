@@ -64,6 +64,18 @@ class AuthController extends Controller
         $tokenResult = $user->createToken('portal-api');
         $token = $tokenResult->accessToken;
 
+        // Store device info on the token record
+        $tokenId = $tokenResult->token->id;
+        if ($tokenId) {
+            \Illuminate\Support\Facades\DB::table('oauth_access_tokens')
+                ->where('id', $tokenId)
+                ->update([
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'browser_fingerprint' => $request->input('browser_fingerprint'),
+                ]);
+        }
+
         return response()->json([
             'message' => 'ورود موفقیت‌آمیز بود',
             'data' => [
