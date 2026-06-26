@@ -143,4 +143,97 @@ class SessionWarningController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Login after warning accepted — creates a new token WITHOUT revoking old ones.
+     * Called by the new session (Browser 2) after the old session (Browser 1) has accepted.
+     */
+    public function login(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'warning_id' => 'required|integer',
+            'poll_token' => 'required|string',
+            'browser_fingerprint' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Find the warning and verify poll_token
+        $warning = SessionWarning::where('id', $request->warning_id)
+            ->where('poll_token', $request->poll_token)
+            ->first();
+
+        if (!$warning) {
+            return response()->json([
+                'message' => 'هشدار یافت نشد',
+            ], 404);
+        }
+
+        if ($warning->status !== 'accepted') {
+            return response()->json([
+                'message' => 'هشدار هنوز تأیید نشده است',
+                'errors' => ['warning' => ['وضعیت هشدار "' . $warning->status . '" است و نیاز به تأیید دارد.']],
+            ], 409);
+        }
+
+        // Get the user
+        $user = User::where('username', $warning->user_id)->first();
+        if (!$user) {
+            return response()->json([
+                'message' => 'کاربر یافت نشد',
+            ], 404);
+        }
+
+        // Create new token — WITHOUT revoking old ones
+        $tokenResult = $user->createToken('portal-api');
+        $token = $tokenResult->accessToken;
+
+        // Store device info on the token record
+        $tokenId = $tokenResult->token->id;
+        if ($tokenId) {
+            \Illuminate\Support\Facades\DB::table('oauth_access_tokens')
+                ->where('id', $tokenId)
+                ->update([
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'browser_fingerprint' => $request->input('browser_fingerprint'),
+                ]);
+        }
+
+        return response()->json([
+            'message' => 'ورود موفقیت‌آمیز بود',
+            'data' => [
+                'user' => $this->formatUser($user),
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+            ],
+        ]);
+    }
+
+    /**
+     * Format user data for response (mirrors AuthController::formatUser).
+     */
+    private function formatUser(User $user): array
+    {
+        return [
+            'username' => $user->username,
+            'fname' => $user->fname,
+            'lname' => $user->lname,
+            'full_name' => $user->getName(),
+            'kodmeli' => $user->kodmeli,
+            'mobile' => $user->mobile,
+            'email' => $user->email,
+            'role' => $user->role,
+            'roles' => $user->roles,
+            'sign' => $user->sign,
+            'theme' => $user->theme,
+            'has_student_profile' => $user->student()->exists(),
+            'has_teacher_profile' => $user->teacher()->exists(),
+            'has_phd_profile' => $user->phd()->exists(),
+            'created_at' => $user->created_at,
+            'updated_at' => $user->updated_at,
+        ];
+    }
 }
