@@ -427,6 +427,11 @@ class CourseController extends Controller
             });
         }
 
+        // Filter by payment method (online / bank)
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
         // Filter by status
         if ($request->filled('status')) {
             // For bank receipt status
