@@ -45,6 +45,18 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Check for existing active sessions (concurrent login detection)
+        $activeTokensCount = $user->tokens()->where('name', 'portal-api')->count();
+        if ($activeTokensCount > 0 && !$request->boolean('force')) {
+            return response()->json([
+                'message' => 'این کاربر در حال حاضر در یک دستگاه دیگر وارد شده است',
+                'has_active_session' => true,
+                'errors' => [
+                    'session' => ['این کاربر در حال حاضر در دستگاه دیگری وارد سیستم شده است. اگر ادامه دهید، نشست (session) قبلی باطل خواهد شد.'],
+                ],
+            ], 409);
+        }
+
         // Revoke old tokens
         $user->tokens()->where('name', 'portal-api')->delete();
 

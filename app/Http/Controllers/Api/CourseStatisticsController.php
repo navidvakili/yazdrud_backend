@@ -34,6 +34,9 @@ class CourseStatisticsController extends Controller
             return Verta::parse("{$y}/{$m}/01")->endMonth()->datetime();
         };
 
+        // Effective price expression (must use DB::raw in SUM, not column alias)
+        $effectivePriceExpr = "CASE WHEN registertuts.payment_method = 'online' THEN COALESCE(gateway_transactions.price, 0) ELSE CAST(COALESCE(courses.amount, 0) AS UNSIGNED) END";
+
         // Base query builder — starts from registertuts, LEFT JOIN to payments & transactions
         // This ensures bank receipt registrations (no gateway transaction) are included.
         // For online payments, amount = gateway_transactions.price.
@@ -78,7 +81,7 @@ class CourseStatisticsController extends Controller
             $bq = $baseQuery($startDate, $endDate, $courseId);
 
             $registeredCount = (clone $bq)->distinct('registertuts.id')->count('registertuts.id');
-            $totalAmount = (clone $bq)->sum('effective_price');
+            $totalAmount = intval((clone $bq)->sum(DB::raw($effectivePriceExpr)));
 
             $onlinePayments = (clone $bq)
                 ->where('registertuts.payment_method', 'online')
@@ -123,7 +126,7 @@ class CourseStatisticsController extends Controller
                 'season_id'       => $sid,
                 'name'            => $season['name'],
                 'registered_count'=> (clone $sbq)->distinct('registertuts.id')->count('registertuts.id'),
-                'total_amount'    => intval((clone $sbq)->sum('effective_price')),
+                'total_amount'    => intval((clone $sbq)->sum(DB::raw($effectivePriceExpr))),
             ];
         }
 
@@ -139,7 +142,7 @@ class CourseStatisticsController extends Controller
             $yearlyStats[] = [
                 'year'            => $y,
                 'registered_count'=> (clone $ybq)->distinct('registertuts.id')->count('registertuts.id'),
-                'total_amount'    => intval((clone $ybq)->sum('effective_price')),
+                'total_amount'    => intval((clone $ybq)->sum(DB::raw($effectivePriceExpr))),
             ];
         }
         // Sort descending (newest first)
@@ -151,7 +154,7 @@ class CourseStatisticsController extends Controller
         $tbq = $baseQuery($yearStart, $yearEnd, $courseId);
 
         $totalRegistered = (clone $tbq)->distinct('registertuts.id')->count('registertuts.id');
-        $totalAmount     = intval((clone $tbq)->sum('effective_price'));
+        $totalAmount     = intval((clone $tbq)->sum(DB::raw($effectivePriceExpr)));
         $totalOnline     = (clone $tbq)
             ->where('registertuts.payment_method', 'online')
             ->where('gateway_transactions.status', 'SUCCEED')
