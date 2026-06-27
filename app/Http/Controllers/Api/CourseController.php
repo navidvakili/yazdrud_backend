@@ -512,6 +512,8 @@ class CourseController extends Controller
         // Search by name, kodmeli, mobile, id_edu
         if ($request->filled('search')) {
             $search = $request->search;
+            // Normalize Persian/Arabic characters: ي→ی, ك→ک, and convert digits
+            $search = str_replace(['ي', 'ك'], ['ی', 'ک'], $search);
             $query->where(function ($q) use ($search) {
                 $q->where('fullname', 'like', "%{$search}%")
                   ->orWhere('kodmeli', 'like', "%{$search}%")
