@@ -495,6 +495,15 @@ class CourseController extends Controller
     {
         $query = Registertut::with(['course', 'payment.transaction']);
 
+        // Exclude non-verified online payments: only show online payments
+        // that have a SUCCEED transaction (or non-online payments always show)
+        $query->where(function ($q) {
+            $q->where('payment_method', '!=', 'online')
+              ->orWhereHas('payment.transaction', function ($q2) {
+                  $q2->where('status', 'SUCCEED');
+              });
+        });
+
         // Filter by course
         if ($request->filled('course_id')) {
             $query->where('course_id', $request->course_id);
@@ -636,6 +645,64 @@ class CourseController extends Controller
 
         return response()->json([
             'message' => 'فیش بانکی رد شد',
+            'data'    => $this->formatRegistration($reg),
+        ]);
+    }
+
+    /**
+     * Mark a registration as refunded (مستردد).
+     */
+    public function refundRegistration($encryptedId): JsonResponse
+    {
+        $id = Crypt::encryptor('decrypt', $encryptedId);
+        if (!$id) {
+            return response()->json(['message' => 'شناسه نامعتبر است'], 400);
+        }
+
+        $reg = Registertut::find($id);
+        if (!$reg) {
+            return response()->json(['message' => 'ثبت‌نام مورد نظر یافت نشد'], 404);
+        }
+
+        if ($reg->refunded) {
+            return response()->json(['message' => 'این ثبت‌نام قبلاً مستردد شده است'], 422);
+        }
+
+        $reg->refunded = true;
+        $reg->refunded_at = now();
+        $reg->save();
+
+        return response()->json([
+            'message' => 'وضعیت ثبت‌نام به مستردد تغییر یافت',
+            'data'    => $this->formatRegistration($reg),
+        ]);
+    }
+
+    /**
+     * Undo a refund (لغو مستردد).
+     */
+    public function undoRefundRegistration($encryptedId): JsonResponse
+    {
+        $id = Crypt::encryptor('decrypt', $encryptedId);
+        if (!$id) {
+            return response()->json(['message' => 'شناسه نامعتبر است'], 400);
+        }
+
+        $reg = Registertut::find($id);
+        if (!$reg) {
+            return response()->json(['message' => 'ثبت‌نام مورد نظر یافت نشد'], 404);
+        }
+
+        if (!$reg->refunded) {
+            return response()->json(['message' => 'این ثبت‌نام مستردد نشده است'], 422);
+        }
+
+        $reg->refunded = false;
+        $reg->refunded_at = null;
+        $reg->save();
+
+        return response()->json([
+            'message' => 'وضعیت مستردد با موفقیت لغو شد',
             'data'    => $this->formatRegistration($reg),
         ]);
     }

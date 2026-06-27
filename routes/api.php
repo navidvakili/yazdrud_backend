@@ -90,6 +90,8 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/{id}/registrations', [\App\Http\Controllers\Api\CourseController::class, 'registrations']);
         Route::post('/registrations/{id}/approve-receipt', [\App\Http\Controllers\Api\CourseController::class, 'approveReceipt']);
         Route::post('/registrations/{id}/reject-receipt', [\App\Http\Controllers\Api\CourseController::class, 'rejectReceipt']);
+        Route::post('/registrations/{id}/refund', [\App\Http\Controllers\Api\CourseController::class, 'refundRegistration']);
+        Route::post('/registrations/{id}/undo-refund', [\App\Http\Controllers\Api\CourseController::class, 'undoRefundRegistration']);
     });
 
     // ==================== Surveys (نظرسنجی دوره‌ها) ====================

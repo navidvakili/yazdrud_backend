@@ -38,8 +38,10 @@ class Registertut extends Model
     protected $casts = [
         'verified_receipt' => 'boolean',
         'rejected_receipt' => 'boolean',
+        'refunded' => 'boolean',
         'verified_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'refunded_at' => 'datetime',
         'certificate_approved' => 'boolean',
         'certificate_approved_at' => 'datetime',
     ];
@@ -73,6 +75,11 @@ class Registertut extends Model
      */
     public function getActualStatusAttribute()
     {
+        // Refunded takes highest priority
+        if ($this->refunded) {
+            return 'refunded';
+        }
+
         // Online payment successful
         if ($this->payment_method === 'online') {
             $payment = $this->payment;
@@ -102,6 +109,7 @@ class Registertut extends Model
     public function getActualStatusTextAttribute()
     {
         $statuses = [
+            'refunded' => 'مستردد',
             'pending' => 'در انتظار تایید',
             'approved' => 'تایید شده',
             'rejected' => 'رد شده',
