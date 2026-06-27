@@ -202,10 +202,34 @@ class CourseController extends Controller
             'start_date'  => 'nullable|date_format:Y/m/d',
             'end_date'    => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
             'capacity'    => 'nullable|integer|min:0',
+        ], [
+            'title.required'       => 'عنوان دوره الزامی است',
+            'title.max'            => 'عنوان دوره نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
+            'amount.required'      => 'مبلغ شهریه الزامی است',
+            'amount.numeric'       => 'مبلغ شهریه باید عددی باشد',
+            'amount.min'           => 'مبلغ شهریه نمی‌تواند منفی باشد',
+            'active.required'      => 'وضعیت دوره الزامی است',
+            'active.in'            => 'وضعیت دوره باید فعال یا غیرفعال باشد',
+            'image.image'          => 'فایل تصویر باید از نوع تصویر باشد',
+            'image.mimes'          => 'فرمت تصویر باید jpeg, png, jpg یا gif باشد',
+            'image.max'            => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد',
+            'duration.integer'     => 'مدت دوره باید عدد صحیح باشد',
+            'duration.min'         => 'مدت دوره نمی‌تواند منفی باشد',
+            'instructor.max'       => 'نام مدرس نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
+            'group_id.integer'     => 'دسته‌بندی نامعتبر است',
+            'group_id.exists'      => 'دسته‌بندی انتخاب شده وجود ندارد',
+            'start_date.date_format' => 'فرمت تاریخ شروع باید سال/ماه/روز باشد',
+            'end_date.date_format'   => 'فرمت تاریخ پایان باید سال/ماه/روز باشد',
+            'end_date.after_or_equal' => 'تاریخ پایان باید بعد یا برابر تاریخ شروع باشد',
+            'capacity.integer'     => 'ظرفیت باید عدد صحیح باشد',
+            'capacity.min'         => 'ظرفیت نمی‌تواند منفی باشد',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'خطا در اعتبارسنجی داده‌های دوره',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
         $course = new Course();
@@ -220,16 +244,22 @@ class CourseController extends Controller
 
         if ($request->start_date) {
             try {
-                $course->start_date = (new Verta(str_replace('/', '-', $request->start_date)))->formatGregorian('Y-m-d');
+                $course->start_date = Verta::parse(str_replace('/', '-', $request->start_date))->formatGregorian('Y-m-d');
             } catch (\Exception $e) {
-                return response()->json(['errors' => ['start_date' => ['فرمت تاریخ نامعتبر است']]], 422);
+                return response()->json([
+                    'message' => 'فرمت تاریخ شروع نامعتبر است',
+                    'errors'  => ['start_date' => ['فرمت تاریخ نامعتبر است']],
+                ], 422);
             }
         }
         if ($request->end_date) {
             try {
-                $course->end_date = (new Verta(str_replace('/', '-', $request->end_date)))->formatGregorian('Y-m-d');
+                $course->end_date = Verta::parse(str_replace('/', '-', $request->end_date))->formatGregorian('Y-m-d');
             } catch (\Exception $e) {
-                return response()->json(['errors' => ['end_date' => ['فرمت تاریخ نامعتبر است']]], 422);
+                return response()->json([
+                    'message' => 'فرمت تاریخ پایان نامعتبر است',
+                    'errors'  => ['end_date' => ['فرمت تاریخ نامعتبر است']],
+                ], 422);
             }
         }
 
@@ -272,10 +302,34 @@ class CourseController extends Controller
             'start_date'  => 'nullable|date_format:Y/m/d',
             'end_date'    => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
             'capacity'    => 'nullable|integer|min:0',
+        ], [
+            'title.required'       => 'عنوان دوره الزامی است',
+            'title.max'            => 'عنوان دوره نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
+            'amount.required'      => 'مبلغ شهریه الزامی است',
+            'amount.numeric'       => 'مبلغ شهریه باید عددی باشد',
+            'amount.min'           => 'مبلغ شهریه نمی‌تواند منفی باشد',
+            'active.required'      => 'وضعیت دوره الزامی است',
+            'active.in'            => 'وضعیت دوره باید فعال یا غیرفعال باشد',
+            'image.image'          => 'فایل تصویر باید از نوع تصویر باشد',
+            'image.mimes'          => 'فرمت تصویر باید jpeg, png, jpg یا gif باشد',
+            'image.max'            => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد',
+            'duration.integer'     => 'مدت دوره باید عدد صحیح باشد',
+            'duration.min'         => 'مدت دوره نمی‌تواند منفی باشد',
+            'instructor.max'       => 'نام مدرس نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
+            'group_id.integer'     => 'دسته‌بندی نامعتبر است',
+            'group_id.exists'      => 'دسته‌بندی انتخاب شده وجود ندارد',
+            'start_date.date_format' => 'فرمت تاریخ شروع باید سال/ماه/روز باشد',
+            'end_date.date_format'   => 'فرمت تاریخ پایان باید سال/ماه/روز باشد',
+            'end_date.after_or_equal' => 'تاریخ پایان باید بعد یا برابر تاریخ شروع باشد',
+            'capacity.integer'     => 'ظرفیت باید عدد صحیح باشد',
+            'capacity.min'         => 'ظرفیت نمی‌تواند منفی باشد',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'خطا در اعتبارسنجی داده‌های دوره',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
         if ($request->has('title')) {
@@ -305,9 +359,12 @@ class CourseController extends Controller
         if ($request->has('start_date')) {
             if ($request->start_date) {
                 try {
-                    $course->start_date = (new Verta(str_replace('/', '-', $request->start_date)))->formatGregorian('Y-m-d');
+                    $course->start_date = Verta::parse(str_replace('/', '-', $request->start_date))->formatGregorian('Y-m-d');
                 } catch (\Exception $e) {
-                    return response()->json(['errors' => ['start_date' => ['فرمت تاریخ نامعتبر است']]], 422);
+                    return response()->json([
+                        'message' => 'فرمت تاریخ شروع نامعتبر است',
+                        'errors'  => ['start_date' => ['فرمت تاریخ نامعتبر است']],
+                    ], 422);
                 }
             } else {
                 $course->start_date = null;
@@ -316,9 +373,12 @@ class CourseController extends Controller
         if ($request->has('end_date')) {
             if ($request->end_date) {
                 try {
-                    $course->end_date = (new Verta(str_replace('/', '-', $request->end_date)))->formatGregorian('Y-m-d');
+                    $course->end_date = Verta::parse(str_replace('/', '-', $request->end_date))->formatGregorian('Y-m-d');
                 } catch (\Exception $e) {
-                    return response()->json(['errors' => ['end_date' => ['فرمت تاریخ نامعتبر است']]], 422);
+                    return response()->json([
+                        'message' => 'فرمت تاریخ پایان نامعتبر است',
+                        'errors'  => ['end_date' => ['فرمت تاریخ نامعتبر است']],
+                    ], 422);
                 }
             } else {
                 $course->end_date = null;
