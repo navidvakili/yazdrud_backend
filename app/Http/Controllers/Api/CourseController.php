@@ -219,10 +219,18 @@ class CourseController extends Controller
         $course->instructor  = $request->instructor;
 
         if ($request->start_date) {
-            $course->start_date = date('Y-m-d', strtotime($request->start_date));
+            try {
+                $course->start_date = (new Verta(str_replace('/', '-', $request->start_date)))->formatGregorian('Y-m-d');
+            } catch (\Exception $e) {
+                return response()->json(['errors' => ['start_date' => ['فرمت تاریخ نامعتبر است']]], 422);
+            }
         }
         if ($request->end_date) {
-            $course->end_date = date('Y-m-d', strtotime($request->end_date));
+            try {
+                $course->end_date = (new Verta(str_replace('/', '-', $request->end_date)))->formatGregorian('Y-m-d');
+            } catch (\Exception $e) {
+                return response()->json(['errors' => ['end_date' => ['فرمت تاریخ نامعتبر است']]], 422);
+            }
         }
 
         $course->capacity         = $request->capacity ?? 0;
@@ -295,10 +303,26 @@ class CourseController extends Controller
             $course->group_id = $request->group_id;
         }
         if ($request->has('start_date')) {
-            $course->start_date = $request->start_date ? date('Y-m-d', strtotime($request->start_date)) : null;
+            if ($request->start_date) {
+                try {
+                    $course->start_date = (new Verta(str_replace('/', '-', $request->start_date)))->formatGregorian('Y-m-d');
+                } catch (\Exception $e) {
+                    return response()->json(['errors' => ['start_date' => ['فرمت تاریخ نامعتبر است']]], 422);
+                }
+            } else {
+                $course->start_date = null;
+            }
         }
         if ($request->has('end_date')) {
-            $course->end_date = $request->end_date ? date('Y-m-d', strtotime($request->end_date)) : null;
+            if ($request->end_date) {
+                try {
+                    $course->end_date = (new Verta(str_replace('/', '-', $request->end_date)))->formatGregorian('Y-m-d');
+                } catch (\Exception $e) {
+                    return response()->json(['errors' => ['end_date' => ['فرمت تاریخ نامعتبر است']]], 422);
+                }
+            } else {
+                $course->end_date = null;
+            }
         }
         if ($request->has('capacity')) {
             $course->capacity = $request->capacity ?? 0;
