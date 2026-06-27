@@ -54,6 +54,7 @@ class Course extends Model
     public function confirmedRegistrations()
     {
         return $this->hasMany(Registertut::class, 'course_id')
+            ->where('refunded', false)
             ->where(function ($query) {
                 $query->where('payment_method', 'online')
                     ->whereHas('payment.transaction', function ($q) {

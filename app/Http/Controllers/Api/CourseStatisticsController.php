@@ -62,6 +62,7 @@ class CourseStatisticsController extends Controller
                     $w->where('gateway_transactions.status', 'SUCCEED')
                       ->orWhere('registertuts.verified_receipt', true);
                 })
+                ->where('registertuts.refunded', false)
                 ->whereBetween('registertuts.created_at', [$startDate, $endDate]);
 
             if ($cId) {
@@ -210,9 +211,9 @@ class CourseStatisticsController extends Controller
     public function statistics(): JsonResponse
     {
         $activeCourses = Course::where('active', true)->count();
-        $totalRegistrations = Registertut::count();
+        $totalRegistrations = Registertut::where('refunded', false)->count();
 
-        // Verified registrations (online paid + bank verified)
+        // Verified registrations (online paid + bank verified, excluding refunded)
         $verifiedCount = Registertut::where(function ($q) {
                 $q->where('verified_receipt', true)
                   ->orWhere(function ($q2) {
@@ -222,10 +223,13 @@ class CourseStatisticsController extends Controller
                          });
                   });
             })
+            ->where('refunded', false)
             ->count();
 
         // Registration stats by course
-        $topCourses = Course::withCount('registrations')
+        $topCourses = Course::withCount(['registrations' => function ($q) {
+                $q->where('refunded', false);
+            }])
             ->orderBy('registrations_count', 'desc')
             ->take(5)
             ->get()

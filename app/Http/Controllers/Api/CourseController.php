@@ -588,6 +588,7 @@ class CourseController extends Controller
         $course = Course::find($reg->course_id);
         if ($course) {
             $paidCount = Registertut::where('course_id', $course->id)
+                ->where('refunded', false)
                 ->where(function ($q) {
                     $q->where('verified_receipt', true)
                       ->orWhere(function ($q2) {
