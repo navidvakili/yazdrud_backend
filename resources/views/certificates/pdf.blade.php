@@ -101,6 +101,7 @@
 
         .signature-area {
             text-align: center;
+            position: relative;
         }
 
         .signature-area .sig-line {
@@ -157,5 +158,6 @@
             </tr>
         </table>
     </div>
+    <div style="margin-top: -18px; margin-bottom: 5px; position:absolute; z-index:99px; bottom:85px;left: 100px;"><img src="{{ public_path('images/signature.png') }}" width="165" style="opacity:0.75;" alt="امضا" /></div>
 </body>
 </html>
