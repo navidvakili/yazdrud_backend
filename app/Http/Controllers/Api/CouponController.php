@@ -112,7 +112,7 @@ class CouponController extends Controller
         $coupon->type_discount = $request->type_discount;
         $coupon->value         = $request->value;
         $coupon->course_id     = $request->course_id;
-        $coupon->term_id       = $request->term_id ?? 0;
+        $coupon->term_id       = $request->term_id ?? null;
         $coupon->capacity      = $request->capacity ?? 100;
         $coupon->used_count    = 0;
         $coupon->start_date    = $request->start_date ?? '';
@@ -179,6 +179,12 @@ class CouponController extends Controller
         $coupon = TermCoupon::find($id);
         if (!$coupon) {
             return response()->json(['message' => 'بن تخفیف مورد نظر یافت نشد'], 404);
+        }
+
+        if ($coupon->used_count > 0) {
+            return response()->json([
+                'message' => 'این بن تخفیف قبلاً استفاده شده است و قابل حذف نمی‌باشد.',
+            ], 422);
         }
 
         $coupon->delete();
@@ -352,7 +358,7 @@ class CouponController extends Controller
         $coupon->type_discount = $request->type_discount;
         $coupon->value         = $request->value;
         $coupon->course_id     = $request->course_id;
-        $coupon->term_id       = $request->term_id ?? 0;
+        $coupon->term_id       = $request->term_id ?? null;
         $coupon->capacity      = $request->capacity ?? 100;
         $coupon->used_count    = 0;
         $coupon->start_date    = $request->start_date ?? '';
