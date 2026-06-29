@@ -1,0 +1,101 @@
+<?php
+
+namespace App\Http\Resources\Api;
+
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class CourseResource extends JsonResource
+{
+    public function toArray($request)
+    {
+        $remaining = $this->capacity > 0
+            ? $this->capacity - $this->registered_count
+            : -1;
+
+        if ($this->active && ($this->capacity == 0 || $remaining > 0)) {
+            $status = 'active';
+        } elseif ($this->active && $remaining <= 0) {
+            $status = 'full';
+        } else {
+            $status = 'soon';
+        }
+
+        return [
+            'id'              => (string) $this->id,
+            'title'           => $this->title,
+            'category'        => $this->determineCategory(),
+            'mentor'          => $this->instructor ?? 'مربی',
+            'duration'        => $this->duration ? $this->duration . ' ساعت' : 'نامشخص',
+            'price'           => (int) $this->amount,
+            'capacity'        => (int) $this->capacity,
+            'registeredCount' => (int) $this->registered_count,
+            'startDate'       => $this->start_date ? $this->formatShamsiDate($this->start_date) : 'نامشخص',
+            'daysOfWeek'      => [],
+            'location'        => '',
+            'description'     => $this->description ?? '',
+            'syllabus'        => $this->parseSyllabus(),
+            'prerequisites'   => ['آشنایی مقدماتی با مفاهیم مرتبط'],
+            'status'          => $status,
+            'banner'          => $this->getBannerGradient(),
+            'image_url'       => $this->image_url,
+            'created_at'      => $this->created_at ? $this->created_at->toISOString() : null,
+        ];
+    }
+
+    private function determineCategory(): string
+    {
+        $title = $this->title ?? '';
+        if (preg_match('/آی‌تی|فناوری|کامپیوتر|برنامه‌نویسی|دیجیتال|react|برنامه نویسی/i', $title)) {
+            return 'it';
+        }
+        if (preg_match('/استارت‌آپ|کارآفرینی|کسب‌وکار|استارتاپ/i', $title)) {
+            return 'startup';
+        }
+        if (preg_match('/هنر|طراحی|بسته‌بندی|معماری/i', $title)) {
+            return 'design';
+        }
+        if (preg_match('/مهارت|نرم|فردی|مذاکره/i', $title)) {
+            return 'softskills';
+        }
+        return 'it';
+    }
+
+    private function parseSyllabus(): array
+    {
+        if (!empty($this->syllabus)) {
+            $lines = explode("\n", $this->syllabus);
+            $lines = array_map('trim', $lines);
+            $lines = array_filter($lines);
+            return array_values($lines);
+        }
+        return [];
+    }
+
+    private function getBannerGradient(): string
+    {
+        $gradients = [
+            'bg-gradient-to-br from-blue-600 to-indigo-900',
+            'bg-gradient-to-br from-amber-500 to-orange-800',
+            'bg-gradient-to-br from-emerald-600 to-teal-900',
+            'bg-gradient-to-br from-rose-600 to-red-950',
+            'bg-gradient-to-br from-purple-600 to-indigo-950',
+            'bg-gradient-to-br from-cyan-600 to-slate-800',
+        ];
+        return $gradients[array_rand($gradients)];
+    }
+
+    private function formatShamsiDate(?string $date): string
+    {
+        if (!$date) return 'نامشخص';
+        try {
+            $parts = explode('-', $date);
+            if (count($parts) !== 3) return $date;
+
+            $v = new \Hekmatinasser\Verta\Verta();
+            $v->setDateJalali((int) $parts[0], (int) $parts[1], (int) $parts[2]);
+            return $v->format('l d F Y');
+        } catch (\Exception $e) {
+            return $date;
+        }
+    }
+}

@@ -1,0 +1,181 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\CourseResource;
+use App\Models\Course;
+use Illuminate\Http\Request;
+
+class PublicCourseController extends Controller
+{
+    /**
+     * Display a paginated listing of active courses with optional filters.
+     *
+     * @OA\Get(
+     *     path="/api/public/courses",
+     *     summary="لیست دوره‌های آموزشی فعال با فیلتر",
+     *     tags={"Courses"},
+     *     @OA\Response(response=200, description="List of courses")
+     * )
+     */
+    public function index(Request $request)
+    {
+        $query = Course::where('active', true);
+
+        // Filter by category (title-based keyword matching)
+        if ($request->filled('category')) {
+            $category = $request->category;
+            $query->where(function ($q) use ($category) {
+                $q->where('title', 'like', '%' . $category . '%');
+            });
+        }
+
+        // Search by title
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('instructor', 'like', "%{$search}%");
+            });
+        }
+
+        // Sort
+        $sortField = $request->get('sort', 'created_at');
+        $sortDir = $request->get('dir', 'desc');
+        $allowedSorts = ['created_at', 'amount', 'start_date', 'title', 'registered_count'];
+        if (!in_array($sortField, $allowedSorts)) {
+            $sortField = 'created_at';
+        }
+        $query->orderBy($sortField, $sortDir);
+
+        $perPage = min((int) $request->get('per_page', 12), 50);
+        $courses = $query->paginate($perPage);
+
+        return CourseResource::collection($courses);
+    }
+
+    /**
+     * Display the specified course.
+     *
+     * @OA\Get(
+     *     path="/api/public/courses/{id}",
+     *     summary="مشاهده جزئیات یک دوره",
+     *     tags={"Courses"},
+     *     @OA\Response(response=200, description="Course details")
+     * )
+     */
+    public function show($id)
+    {
+        $course = Course::findOrFail($id);
+
+        if (!$course->active) {
+            return response()->json(['message' => 'دوره مورد نظر یافت نشد.'], 404);
+        }
+
+        return new CourseResource($course);
+    }
+
+    /**
+     * Get featured courses (latest active courses with available capacity).
+     *
+     * @OA\Get(
+     *     path="/api/public/courses/featured",
+     *     summary="دوره‌های ویژه و پیشنهادی",
+     *     tags={"Courses"},
+     *     @OA\Response(response=200, description="Featured courses")
+     * )
+     */
+    public function featured()
+    {
+        $courses = Course::where('active', true)
+            ->where(function ($q) {
+                $q->where('capacity', 0)
+                  ->orWhereColumn('registered_count', '<', 'capacity');
+            })
+            ->orderBy('created_at', 'desc')
+            ->take(6)
+            ->get();
+
+        return CourseResource::collection($courses);
+    }
+
+    /**
+     * Get pre-registration courses (courses not yet active, coming soon).
+     *
+     * @OA\Get(
+     *     path="/api/public/courses/pre-register",
+     *     summary="دوره‌های قابل پیش‌ثبت‌نام",
+     *     tags={"Courses"},
+     *     @OA\Response(response=200, description="Pre-registration courses")
+     * )
+     */
+    public function preRegister()
+    {
+        $courses = Course::where('active', false)
+            ->orWhere(function ($q) {
+                $q->where('active', true)
+                  ->where('capacity', '>', 0)
+                  ->whereColumn('registered_count', '>=', 'capacity');
+            })
+            ->orderBy('created_at', 'desc')
+            ->take(4)
+            ->get();
+
+        return CourseResource::collection($courses);
+    }
+
+    /**
+     * Get free courses (price = 0).
+     *
+     * @OA\Get(
+     *     path="/api/public/courses/free",
+     *     summary="دوره‌ها و کارگاه‌های رایگان",
+     *     tags={"Courses"},
+     *     @OA\Response(response=200, description="Free courses")
+     * )
+     */
+    public function free()
+    {
+        $courses = Course::where('active', true)
+            ->where(function ($q) {
+                $q->where('amount', 0)
+                  ->orWhereNull('amount');
+            })
+            ->orderBy('created_at', 'desc')
+            ->take(4)
+            ->get();
+
+        return CourseResource::collection($courses);
+    }
+
+    /**
+     * Get site statistics.
+     *
+     * @OA\Get(
+     *     path="/api/public/stats",
+     *     summary="آمار کلی سایت",
+     *     tags={"Stats"},
+     *     @OA\Response(response=200, description="Site statistics")
+     * )
+     */
+    public function stats()
+    {
+        $activeCourses = Course::where('active', true)->count();
+        $totalRegistrations = \App\Models\Registertut::count();
+        $instructors = Course::where('active', true)
+            ->whereNotNull('instructor')
+            ->distinct('instructor')
+            ->count('instructor');
+
+        return response()->json([
+            'active_courses' => $activeCourses,
+            'total_registrations' => $totalRegistrations,
+            'instructors' => $instructors,
+            'graduates' => \App\Models\Registertut::where('status', 'paid')
+                ->orWhere('verified_receipt', true)
+                ->count(),
+        ]);
+    }
+}

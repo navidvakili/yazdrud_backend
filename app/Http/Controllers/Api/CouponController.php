@@ -288,4 +288,105 @@ class CouponController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Generate a unique random coupon code.
+     * GET /coupons/generate-code
+     */
+    public function generateCode(Request $request): JsonResponse
+    {
+        $length = $request->get('length', 8);
+        $prefix = $request->get('prefix', '');
+
+        do {
+            $code = $prefix;
+            $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            for ($i = 0; $i < $length; $i++) {
+                $code .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+        } while (TermCoupon::where('code', $code)->exists());
+
+        return response()->json([
+            'data' => [
+                'code' => $code,
+            ],
+        ]);
+    }
+
+    /**
+     * Generate a coupon with auto-generated code and create it.
+     * POST /coupons/generate
+     */
+    public function generate(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'title'         => 'required|string|max:191',
+            'type'          => 'required|in:discount,installment',
+            'type_discount' => 'required|in:percent,money',
+            'value'         => 'required|integer|min:0',
+            'course_id'     => 'nullable|exists:courses,id',
+            'capacity'      => 'nullable|integer|min:0',
+            'start_date'    => 'nullable|string|max:191',
+            'finish_date'   => 'nullable|string|max:191',
+            'is_active'     => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Generate unique code
+        $prefix = $request->get('prefix', '');
+        do {
+            $code = $prefix;
+            $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            for ($i = 0; $i < 8; $i++) {
+                $code .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+        } while (TermCoupon::where('code', $code)->exists());
+
+        $coupon = new TermCoupon();
+        $coupon->title         = $request->title;
+        $coupon->code          = $code;
+        $coupon->type          = $request->type;
+        $coupon->type_discount = $request->type_discount;
+        $coupon->value         = $request->value;
+        $coupon->course_id     = $request->course_id;
+        $coupon->term_id       = $request->term_id ?? 0;
+        $coupon->capacity      = $request->capacity ?? 100;
+        $coupon->used_count    = 0;
+        $coupon->start_date    = $request->start_date ?? '';
+        $coupon->finish_date   = $request->finish_date ?? '';
+        $coupon->is_active     = $request->boolean('is_active', true);
+        $coupon->save();
+
+        return response()->json([
+            'message' => 'بن تخفیف با موفقیت ایجاد شد',
+            'data'    => $this->formatCoupon($coupon),
+        ], 201);
+    }
+
+    /**
+     * Get courses list for autocomplete.
+     * GET /coupons/courses
+     */
+    public function courses(Request $request): JsonResponse
+    {
+        $query = Course::query();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%");
+            });
+        }
+
+        $courses = $query->orderBy('title')
+            ->limit($request->get('limit', 20))
+            ->get(['id', 'title']);
+
+        return response()->json([
+            'data' => $courses,
+        ]);
+    }
 }

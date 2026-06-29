@@ -37,6 +37,27 @@ Route::post('/session-warnings', [\App\Http\Controllers\Api\SessionWarningContro
 Route::get('/session-warnings/{id}/status', [\App\Http\Controllers\Api\SessionWarningController::class, 'status']);
 Route::post('/session-warnings/login', [\App\Http\Controllers\Api\SessionWarningController::class, 'login']);
 
+// ==================== Public Courses API (for frontend website) ====================
+// NOTE: Uses /public prefix to avoid conflict with admin CourseController
+Route::get('/public/courses/featured', [\App\Http\Controllers\Api\PublicCourseController::class, 'featured']);
+Route::get('/public/courses/pre-register', [\App\Http\Controllers\Api\PublicCourseController::class, 'preRegister']);
+Route::get('/public/courses/free', [\App\Http\Controllers\Api\PublicCourseController::class, 'free']);
+Route::get('/public/courses', [\App\Http\Controllers\Api\PublicCourseController::class, 'index']);
+Route::get('/public/courses/{id}', [\App\Http\Controllers\Api\PublicCourseController::class, 'show']);
+
+// ==================== Public Site Stats ====================
+Route::get('/public/stats', [\App\Http\Controllers\Api\PublicCourseController::class, 'stats']);
+
+// ==================== Public Registrations API (for frontend website) ====================
+// NOTE: lookup MUST come before {id} to avoid route conflict
+Route::get('/registrations', [\App\Http\Controllers\Api\RegistrationController::class, 'index']);
+Route::post('/registrations', [\App\Http\Controllers\Api\RegistrationController::class, 'store']);
+Route::any('/registrations/verify', [\App\Http\Controllers\Api\RegistrationController::class, 'verify']);
+Route::get('/registrations/lookup', [\App\Http\Controllers\Api\RegistrationController::class, 'lookup']);
+Route::get('/registrations/{id}', [\App\Http\Controllers\Api\RegistrationController::class, 'show']);
+Route::put('/registrations/{id}/status', [\App\Http\Controllers\Api\RegistrationController::class, 'updateStatus']);
+Route::delete('/registrations/{id}', [\App\Http\Controllers\Api\RegistrationController::class, 'destroy']);
+
 // ==================== Authenticated Routes ====================
 Route::middleware('auth:api')->group(function () {
     // Current user
@@ -102,11 +123,14 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/{id}', [\App\Http\Controllers\Api\SurveyController::class, 'destroy']);
     });
 
-    // ==================== Coupons (بن تخفیف) ====================
+    // ==================== Coupons / Vouchers (بن خرید و تخفیف) ====================
     Route::prefix('coupons')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\CouponController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Api\CouponController::class, 'store']);
         Route::post('/validate', [\App\Http\Controllers\Api\CouponController::class, 'validate']);
+        Route::get('/generate-code', [\App\Http\Controllers\Api\CouponController::class, 'generateCode']);
+        Route::post('/generate', [\App\Http\Controllers\Api\CouponController::class, 'generate']);
+        Route::get('/courses', [\App\Http\Controllers\Api\CouponController::class, 'courses']);
         Route::get('/{id}', [\App\Http\Controllers\Api\CouponController::class, 'show']);
         Route::put('/{id}', [\App\Http\Controllers\Api\CouponController::class, 'update']);
         Route::delete('/{id}', [\App\Http\Controllers\Api\CouponController::class, 'destroy']);
