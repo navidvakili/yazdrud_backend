@@ -59,7 +59,7 @@ class CourseController extends Controller
             'amount'           => $course->amount,
             'amount_formatted' => number_format(intval($course->amount)),
             'active'           => (bool) $course->active,
-            'image'            => $course->image_url,
+            'image'            => $course->image ? $course->image_url : null,
             'description'      => $course->description,
             'syllabus'         => $course->syllabus,
             'duration'         => $course->duration,
