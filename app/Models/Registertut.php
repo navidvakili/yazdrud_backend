@@ -33,6 +33,7 @@ class Registertut extends Model
         'skills',
         'motivation',
         'status',
+        'enrollment_code',
     ];
 
     protected $casts = [

@@ -34,6 +34,7 @@ class RegistrationResource extends JsonResource
             'adminNotes'        => $this->getAdminNotes(),
             'payment_method'    => $this->payment_method,
             'actual_status'     => $this->actual_status,
+            'enrollment_code'   => $this->enrollment_code,
             'createdAt'         => $this->created_at ? $this->created_at->toISOString() : '',
             'created_at'        => $this->created_at ? $this->created_at->toISOString() : '',
         ];

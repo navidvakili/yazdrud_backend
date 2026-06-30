@@ -41,6 +41,7 @@ return [
         'api_key' => env('IPPANEL_API_KEY'),
         'sender_number' => env('IPPANEL_SENDER_NUMBER', '10003538264099'),
         'verify_pattern' => env('IPPANEL_VERIFY_PATTERN', 'b4gofrp80wrccix'),
+        'enrollment_pattern' => env('IPPANEL_ENROLLMENT_PATTERN'),
     ],
 
     'slack' => [

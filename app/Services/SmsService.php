@@ -92,4 +92,35 @@ class SmsService
             'code' => $code,
         ], $mobile);
     }
+
+    /**
+     * Send an enrollment code SMS to a successfully registered student.
+     *
+     * The IPPanel pattern should accept variables like {name}, {course}, {code}.
+     * Falls back silently if the pattern is not configured.
+     *
+     * @param string $mobile Recipient mobile number
+     * @param string $enrollmentCode The 8-char enrollment code
+     * @param string $fullName The student's full name
+     * @param string $courseTitle The course title
+     * @return bool
+     */
+    public function sendEnrollmentSms(string $mobile, string $enrollmentCode, string $fullName, string $courseTitle): bool
+    {
+        $patternCode = config('services.ippanel.enrollment_pattern');
+
+        if (empty($patternCode)) {
+            Log::info('Enrollment SMS skipped — no enrollment_pattern configured.', [
+                'mobile' => $mobile,
+                'code' => $enrollmentCode,
+            ]);
+            return false;
+        }
+
+        return $this->sendByPattern($patternCode, [
+            'name'   => $fullName,
+            'course' => $courseTitle,
+            'code'   => $enrollmentCode,
+        ], $mobile);
+    }
 }

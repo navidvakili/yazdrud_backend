@@ -10,6 +10,8 @@ use App\Models\GatewayTransaction;
 use App\Models\Registertut;
 use App\Models\RegistertutsPayment;
 use App\Services\IranKishService;
+use App\Services\SmsService;
+use App\Services\EnrollmentCodeGenerator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,10 +20,14 @@ use Illuminate\Support\Facades\Log;
 class RegistrationController extends Controller
 {
     private IranKishService $iranKish;
+    private SmsService $smsService;
+    private EnrollmentCodeGenerator $enrollmentCodeGenerator;
 
-    public function __construct(IranKishService $iranKish)
+    public function __construct(IranKishService $iranKish, SmsService $smsService, EnrollmentCodeGenerator $enrollmentCodeGenerator)
     {
         $this->iranKish = $iranKish;
+        $this->smsService = $smsService;
+        $this->enrollmentCodeGenerator = $enrollmentCodeGenerator;
     }
 
     /**
@@ -136,7 +142,19 @@ class RegistrationController extends Controller
                     'register_id'    => $register->id,
                 ]);
 
+                // Generate enrollment code inside transaction
+                $enrollmentCode = $this->enrollmentCodeGenerator->generate();
+                $register->update(['enrollment_code' => $enrollmentCode]);
+
                 DB::commit();
+
+                // Send SMS outside transaction so API failure doesn't roll back registration
+                $this->smsService->sendEnrollmentSms(
+                    $register->mobile,
+                    $enrollmentCode,
+                    $register->fullname,
+                    $course->title,
+                );
 
                 return response()->json([
                     'message'      => 'ثبت نام شما با موفقیت انجام شد. لطفاً منتظر تایید فیش بانکی باشید.',
@@ -233,7 +251,19 @@ class RegistrationController extends Controller
                 'register_id'    => $register->id,
             ]);
 
+            // Generate enrollment code inside transaction
+            $enrollmentCode = $this->enrollmentCodeGenerator->generate();
+            $register->update(['enrollment_code' => $enrollmentCode]);
+
             DB::commit();
+
+            // Send SMS outside transaction so API failure doesn't roll back registration
+            $this->smsService->sendEnrollmentSms(
+                $register->mobile,
+                $enrollmentCode,
+                $register->fullname,
+                $course->title,
+            );
 
             return response()->json([
                 'message'      => 'ثبت نام شما با موفقیت انجام شد.',
@@ -306,6 +336,7 @@ class RegistrationController extends Controller
                     'ref_id'          => $retrievalReferenceNumber,
                     'tracking_code'   => $retrievalReferenceNumber,
                     'registration_id' => $register ? 'SAU-' . str_pad($register->id, 5, '0', STR_PAD_LEFT) : null,
+                    'enrollment_code' => $register?->enrollment_code,
                 ]);
                 return redirect()->away($redirectPath . '?' . $params);
             }
@@ -372,7 +403,20 @@ class RegistrationController extends Controller
                     'card_number'   => $request->input('maskedPan', ''),
                 ]);
 
+                // Generate enrollment code inside transaction
+                $enrollmentCode = $this->enrollmentCodeGenerator->generate();
+                $register->update(['enrollment_code' => $enrollmentCode]);
+
                 DB::commit();
+
+                // Send SMS outside transaction so API failure doesn't roll back registration
+                $course = Course::find($regData['course_id']);
+                $this->smsService->sendEnrollmentSms(
+                    $register->mobile,
+                    $enrollmentCode,
+                    $register->fullname,
+                    $course?->title ?? 'دوره آموزشی',
+                );
             } catch (\Exception $e) {
                 DB::rollBack();
                 $params = http_build_query([
@@ -389,6 +433,7 @@ class RegistrationController extends Controller
                 'ref_id'          => $retrievalReferenceNumber,
                 'tracking_code'   => $retrievalReferenceNumber,
                 'registration_id' => 'SAU-' . str_pad($register->id, 5, '0', STR_PAD_LEFT),
+                'enrollment_code' => $enrollmentCode,
             ]);
             return redirect()->away($redirectPath . '?' . $params);
 
