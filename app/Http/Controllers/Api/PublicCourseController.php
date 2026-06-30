@@ -135,9 +135,10 @@ class PublicCourseController extends Controller
      */
     public function preRegister()
     {
-        $query = Course::whereJsonContains('sections', 'pre_register');
-        $this->applyDateFilters($query);
-        $courses = $query->orderBy('created_at', 'desc')
+        // Primary query: trust the explicit pre_register section tag.
+        // No date filters — the admin's manual tagging is authoritative.
+        $courses = Course::whereJsonContains('sections', 'pre_register')
+            ->orderBy('created_at', 'desc')
             ->take(4)
             ->get();
 
