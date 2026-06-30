@@ -26,6 +26,8 @@ class CouponController extends Controller
             'value_formatted'=> $coupon->value_formatted,
             'course_id'      => $coupon->course_id,
             'course_title'   => $coupon->course?->title,
+            'group_id'       => $coupon->group_id,
+            'group_title'    => $coupon->group?->title,
             'capacity'       => $coupon->capacity,
             'used_count'     => $coupon->used_count,
             'remaining'      => $coupon->remaining,
@@ -42,7 +44,7 @@ class CouponController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = TermCoupon::with('course');
+        $query = TermCoupon::with(['course', 'group']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -73,7 +75,7 @@ class CouponController extends Controller
      */
     public function show($id): JsonResponse
     {
-        $coupon = TermCoupon::with('course')->find($id);
+        $coupon = TermCoupon::with(['course', 'group'])->find($id);
         if (!$coupon) {
             return response()->json(['message' => 'بن تخفیف مورد نظر یافت نشد'], 404);
         }
@@ -95,6 +97,7 @@ class CouponController extends Controller
             'type_discount' => 'required|in:percent,money',
             'value'         => 'required|integer|min:0',
             'course_id'     => 'nullable|exists:courses,id',
+            'group_id'      => 'nullable|exists:course_groups,id',
             'capacity'      => 'nullable|integer|min:0',
             'start_date'    => 'nullable|string|max:191',
             'finish_date'   => 'nullable|string|max:191',
@@ -112,6 +115,7 @@ class CouponController extends Controller
         $coupon->type_discount = $request->type_discount;
         $coupon->value         = $request->value;
         $coupon->course_id     = $request->course_id;
+        $coupon->group_id      = $request->group_id;
         $coupon->term_id       = $request->term_id ?? null;
         $coupon->capacity      = $request->capacity ?? 100;
         $coupon->used_count    = 0;
@@ -143,6 +147,7 @@ class CouponController extends Controller
             'type_discount' => 'sometimes|required|in:percent,money',
             'value'         => 'sometimes|required|integer|min:0',
             'course_id'     => 'nullable|exists:courses,id',
+            'group_id'      => 'nullable|exists:course_groups,id',
             'capacity'      => 'nullable|integer|min:0',
             'start_date'    => 'nullable|string|max:191',
             'finish_date'   => 'nullable|string|max:191',
@@ -159,6 +164,7 @@ class CouponController extends Controller
         if ($request->has('type_discount')) $coupon->type_discount = $request->type_discount;
         if ($request->has('value')) $coupon->value = $request->value;
         if ($request->has('course_id')) $coupon->course_id = $request->course_id;
+        if ($request->has('group_id')) $coupon->group_id = $request->group_id;
         if ($request->has('capacity')) $coupon->capacity = $request->capacity;
         if ($request->has('start_date')) $coupon->start_date = $request->start_date;
         if ($request->has('finish_date')) $coupon->finish_date = $request->finish_date;
@@ -331,6 +337,7 @@ class CouponController extends Controller
             'type_discount' => 'required|in:percent,money',
             'value'         => 'required|integer|min:0',
             'course_id'     => 'nullable|exists:courses,id',
+            'group_id'      => 'nullable|exists:course_groups,id',
             'capacity'      => 'nullable|integer|min:0',
             'start_date'    => 'nullable|string|max:191',
             'finish_date'   => 'nullable|string|max:191',
@@ -358,6 +365,7 @@ class CouponController extends Controller
         $coupon->type_discount = $request->type_discount;
         $coupon->value         = $request->value;
         $coupon->course_id     = $request->course_id;
+        $coupon->group_id      = $request->group_id;
         $coupon->term_id       = $request->term_id ?? null;
         $coupon->capacity      = $request->capacity ?? 100;
         $coupon->used_count    = 0;

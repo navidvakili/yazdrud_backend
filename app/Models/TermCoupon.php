@@ -17,6 +17,7 @@ class TermCoupon extends Model
         'type_discount',
         'term_id',
         'course_id',
+        'group_id',
         'code',
         'start_date',
         'finish_date',
@@ -25,6 +26,14 @@ class TermCoupon extends Model
         'is_active',
         'value',
     ];
+
+    /**
+     * Get the course group that this coupon is restricted to (if any).
+     */
+    public function group()
+    {
+        return $this->belongsTo(CourseGroup::class, 'group_id');
+    }
 
     protected $casts = [
         'is_active' => 'boolean',
