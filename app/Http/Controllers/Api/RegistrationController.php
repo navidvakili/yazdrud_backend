@@ -517,6 +517,26 @@ class RegistrationController extends Controller
     }
 
     /**
+     * Lookup registration by enrollment code.
+     *
+     * Returns matching registration data so the frontend can auto-fill fields.
+     */
+    public function lookupByEnrollmentCode(string $code)
+    {
+        $registration = Registertut::with(['course', 'payment.transaction'])
+            ->where('enrollment_code', $code)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'message' => 'کد فراگیر وارد شده معتبر نیست.',
+            ], 404);
+        }
+
+        return new RegistrationResource($registration);
+    }
+
+    /**
      * Remove the specified registration.
      */
     public function destroy($id)

@@ -61,6 +61,7 @@ Route::get('/registrations', [\App\Http\Controllers\Api\RegistrationController::
 Route::post('/registrations', [\App\Http\Controllers\Api\RegistrationController::class, 'store']);
 Route::any('/registrations/verify', [\App\Http\Controllers\Api\RegistrationController::class, 'verify']);
 Route::get('/registrations/lookup', [\App\Http\Controllers\Api\RegistrationController::class, 'lookup']);
+Route::get('/registrations/lookup-by-enrollment-code/{code}', [\App\Http\Controllers\Api\RegistrationController::class, 'lookupByEnrollmentCode']);
 Route::get('/registrations/{id}', [\App\Http\Controllers\Api\RegistrationController::class, 'show']);
 Route::put('/registrations/{id}/status', [\App\Http\Controllers\Api\RegistrationController::class, 'updateStatus']);
 Route::delete('/registrations/{id}', [\App\Http\Controllers\Api\RegistrationController::class, 'destroy']);

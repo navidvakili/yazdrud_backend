@@ -18,18 +18,18 @@ class EnrollmentCodeGenerator
     ];
 
     /**
-     * Generate an 8-character enrollment code consisting of a random
+     * Generate a 7-character enrollment code consisting of a random
      * Persian name combined with random digits.
      *
-     * Example: "سارا6152", "مهرداد3", "باران784"
+     * Example: "سارا512", "مهرداد", "باران73"
      *
-     * The total length will be exactly 8 characters (Persian name + digits).
+     * The total length will be exactly 7 characters (Persian name + digits).
      */
     public function generate(): string
     {
         $name = self::PERSIAN_NAMES[array_rand(self::PERSIAN_NAMES)];
         $nameLen = mb_strlen($name);
-        $digitsNeeded = 8 - $nameLen;
+        $digitsNeeded = 7 - $nameLen;
 
         $digits = '';
         for ($i = 0; $i < $digitsNeeded; $i++) {

@@ -120,19 +120,6 @@ class PublicCourseController extends Controller
             ->take(6)
             ->get();
 
-        // Fallback: if no courses with section=featured, use the old logic
-        if ($courses->isEmpty()) {
-            $fallback = Course::where('active', true);
-            $this->applyDateFilters($fallback);
-            $fallback->where(function ($q) {
-                    $q->where('capacity', 0)
-                      ->orWhereColumn('registered_count', '<', 'capacity');
-                })
-                ->orderBy('created_at', 'desc')
-                ->take(6);
-            $courses = $fallback->get();
-        }
-
         return CourseResource::collection($courses);
     }
 
