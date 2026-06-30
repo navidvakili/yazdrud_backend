@@ -344,6 +344,8 @@ class CourseController extends Controller
             'instructor'   => 'nullable|string|max:255',
             'instructor_id' => 'nullable|integer|exists:course_instructors,id',
             'group_id'     => 'nullable|integer|exists:course_groups,id',
+            'start_date'   => 'nullable|date_format:Y/m/d',
+            'end_date'     => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
             'registration_start_date' => 'nullable|date_format:Y/m/d',
             'registration_end_date'   => 'nullable|date_format:Y/m/d|after_or_equal:registration_start_date',
             'capacity'                => 'nullable|integer|min:0',
