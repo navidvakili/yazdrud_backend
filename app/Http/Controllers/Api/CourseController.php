@@ -40,6 +40,7 @@ class CourseController extends Controller
             'id'               => $course->id,
             'group_id'         => $course->group_id,
             'group_title'      => $course->group?->title,
+            'section'          => $course->section ?? 'normal',
             'title'            => $course->title,
             'amount'           => $course->amount,
             'amount_formatted' => number_format(intval($course->amount)),
@@ -50,6 +51,8 @@ class CourseController extends Controller
             'duration'         => $course->duration,
             'duration_text'    => $course->duration ? "{$course->duration} ساعت" : null,
             'instructor'       => $course->instructor,
+            'instructor_id'    => $course->instructor_id,
+            'instructor_name'  => $course->courseInstructor?->name,
             'start_date'       => $this->toJalali($course->start_date),
             'end_date'         => $this->toJalali($course->end_date),
             'capacity'         => $course->capacity,
@@ -118,6 +121,7 @@ class CourseController extends Controller
     {
         $query = Course::query()
             ->with('group')
+            ->with('courseInstructor')
             ->withCount([
                 'registrations',
                 'confirmedRegistrations as confirmed_registrations_count',
@@ -126,6 +130,11 @@ class CourseController extends Controller
         // Filter by group
         if ($request->has('group_id')) {
             $query->where('group_id', $request->integer('group_id'));
+        }
+
+        // Filter by section (main page placement)
+        if ($request->has('section')) {
+            $query->where('section', $request->section);
         }
 
         // Filter by active status
@@ -190,18 +199,20 @@ class CourseController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'title'       => 'required|string|max:255',
-            'amount'      => 'required|numeric|min:0',
-            'active'      => 'required|in:0,1,true,false',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'description' => 'nullable|string',
-            'syllabus'    => 'nullable|string',
-            'duration'    => 'nullable|integer|min:0',
-            'instructor'  => 'nullable|string|max:255',
-            'group_id'    => 'nullable|integer|exists:course_groups,id',
-            'start_date'  => 'nullable|date_format:Y/m/d',
-            'end_date'    => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
-            'capacity'    => 'nullable|integer|min:0',
+            'title'        => 'required|string|max:255',
+            'amount'       => 'required|numeric|min:0',
+            'active'       => 'required|in:0,1,true,false',
+            'section'      => 'nullable|string|in:normal,featured,pre_register,free',
+            'image'        => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'description'  => 'nullable|string',
+            'syllabus'     => 'nullable|string',
+            'duration'     => 'nullable|integer|min:0',
+            'instructor'   => 'nullable|string|max:255',
+            'instructor_id' => 'nullable|integer|exists:course_instructors,id',
+            'group_id'     => 'nullable|integer|exists:course_groups,id',
+            'start_date'   => 'nullable|date_format:Y/m/d',
+            'end_date'     => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
+            'capacity'     => 'nullable|integer|min:0',
         ], [
             'title.required'       => 'عنوان دوره الزامی است',
             'title.max'            => 'عنوان دوره نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
@@ -210,12 +221,15 @@ class CourseController extends Controller
             'amount.min'           => 'مبلغ شهریه نمی‌تواند منفی باشد',
             'active.required'      => 'وضعیت دوره الزامی است',
             'active.in'            => 'وضعیت دوره باید فعال یا غیرفعال باشد',
+            'section.in'           => 'دسته‌بندی صفحه اصلی نامعتبر است',
             'image.image'          => 'فایل تصویر باید از نوع تصویر باشد',
             'image.mimes'          => 'فرمت تصویر باید jpeg, png, jpg یا gif باشد',
             'image.max'            => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد',
             'duration.integer'     => 'مدت دوره باید عدد صحیح باشد',
             'duration.min'         => 'مدت دوره نمی‌تواند منفی باشد',
             'instructor.max'       => 'نام مدرس نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
+            'instructor_id.integer' => 'شناسه مدرس نامعتبر است',
+            'instructor_id.exists'  => 'مدرس انتخاب شده وجود ندارد',
             'group_id.integer'     => 'دسته‌بندی نامعتبر است',
             'group_id.exists'      => 'دسته‌بندی انتخاب شده وجود ندارد',
             'start_date.date_format' => 'فرمت تاریخ شروع باید سال/ماه/روز باشد',
@@ -233,14 +247,16 @@ class CourseController extends Controller
         }
 
         $course = new Course();
-        $course->group_id    = $request->group_id;
-        $course->title       = $request->title;
-        $course->amount      = str_replace(',', '', (string) $request->amount);
-        $course->active      = filter_var($request->active, FILTER_VALIDATE_BOOLEAN);
-        $course->description = $request->description;
-        $course->syllabus    = $request->syllabus;
-        $course->duration    = $request->duration;
-        $course->instructor  = $request->instructor;
+        $course->group_id      = $request->group_id;
+        $course->section       = $request->section ?? 'normal';
+        $course->title         = $request->title;
+        $course->amount        = str_replace(',', '', (string) $request->amount);
+        $course->active        = filter_var($request->active, FILTER_VALIDATE_BOOLEAN);
+        $course->description   = $request->description;
+        $course->syllabus      = $request->syllabus;
+        $course->duration      = $request->duration;
+        $course->instructor    = $request->instructor;
+        $course->instructor_id = $request->instructor_id;
 
         if ($request->start_date) {
             try {
@@ -290,18 +306,20 @@ class CourseController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'title'       => 'sometimes|required|string|max:255',
-            'amount'      => 'sometimes|required|numeric|min:0',
-            'active'      => 'sometimes|required|in:0,1,true,false',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'description' => 'nullable|string',
-            'syllabus'    => 'nullable|string',
-            'duration'    => 'nullable|integer|min:0',
-            'instructor'  => 'nullable|string|max:255',
-            'group_id'    => 'nullable|integer|exists:course_groups,id',
-            'start_date'  => 'nullable|date_format:Y/m/d',
-            'end_date'    => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
-            'capacity'    => 'nullable|integer|min:0',
+            'title'        => 'sometimes|required|string|max:255',
+            'amount'       => 'sometimes|required|numeric|min:0',
+            'active'       => 'sometimes|required|in:0,1,true,false',
+            'section'      => 'nullable|string|in:normal,featured,pre_register,free',
+            'image'        => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'description'  => 'nullable|string',
+            'syllabus'     => 'nullable|string',
+            'duration'     => 'nullable|integer|min:0',
+            'instructor'   => 'nullable|string|max:255',
+            'instructor_id' => 'nullable|integer|exists:course_instructors,id',
+            'group_id'     => 'nullable|integer|exists:course_groups,id',
+            'start_date'   => 'nullable|date_format:Y/m/d',
+            'end_date'     => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
+            'capacity'     => 'nullable|integer|min:0',
         ], [
             'title.required'       => 'عنوان دوره الزامی است',
             'title.max'            => 'عنوان دوره نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
@@ -310,12 +328,15 @@ class CourseController extends Controller
             'amount.min'           => 'مبلغ شهریه نمی‌تواند منفی باشد',
             'active.required'      => 'وضعیت دوره الزامی است',
             'active.in'            => 'وضعیت دوره باید فعال یا غیرفعال باشد',
+            'section.in'           => 'دسته‌بندی صفحه اصلی نامعتبر است',
             'image.image'          => 'فایل تصویر باید از نوع تصویر باشد',
             'image.mimes'          => 'فرمت تصویر باید jpeg, png, jpg یا gif باشد',
             'image.max'            => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد',
             'duration.integer'     => 'مدت دوره باید عدد صحیح باشد',
             'duration.min'         => 'مدت دوره نمی‌تواند منفی باشد',
             'instructor.max'       => 'نام مدرس نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
+            'instructor_id.integer' => 'شناسه مدرس نامعتبر است',
+            'instructor_id.exists'  => 'مدرس انتخاب شده وجود ندارد',
             'group_id.integer'     => 'دسته‌بندی نامعتبر است',
             'group_id.exists'      => 'دسته‌بندی انتخاب شده وجود ندارد',
             'start_date.date_format' => 'فرمت تاریخ شروع باید سال/ماه/روز باشد',
@@ -352,6 +373,12 @@ class CourseController extends Controller
         }
         if ($request->has('instructor')) {
             $course->instructor = $request->instructor;
+        }
+        if ($request->has('instructor_id')) {
+            $course->instructor_id = $request->instructor_id;
+        }
+        if ($request->has('section')) {
+            $course->section = $request->section;
         }
         if ($request->has('group_id')) {
             $course->group_id = $request->group_id;

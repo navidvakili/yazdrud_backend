@@ -11,6 +11,7 @@ class Course extends Model
 
     protected $fillable = [
         'group_id',
+        'section',
         'title',
         'amount',
         'active',
@@ -19,6 +20,7 @@ class Course extends Model
         'syllabus',
         'duration',
         'instructor',
+        'instructor_id',
         'start_date',
         'end_date',
         'capacity',
@@ -30,6 +32,7 @@ class Course extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'amount' => 'string',
+        'section' => 'string',
     ];
 
     /**
@@ -62,6 +65,14 @@ class Course extends Model
                     })
                     ->orWhere('verified_receipt', true);
             });
+    }
+
+    /**
+     * Get the course instructor (from CourseInstructor model).
+     */
+    public function courseInstructor()
+    {
+        return $this->belongsTo(CourseInstructor::class, 'instructor_id');
     }
 
     /**
