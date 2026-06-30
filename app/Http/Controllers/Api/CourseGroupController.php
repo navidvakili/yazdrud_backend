@@ -15,7 +15,7 @@ class CourseGroupController extends Controller
      */
     public function index(): JsonResponse
     {
-        $groups = CourseGroup::orderBy('title')->get();
+        $groups = CourseGroup::withCount('courses')->orderBy('title')->get();
 
         return response()->json([
             'data' => $groups,
