@@ -28,6 +28,21 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | IPPanel SMS Service
+    |--------------------------------------------------------------------------
+    |
+    | Credentials for IPPanel (ippanel.com) REST API for sending SMS messages.
+    | The verify_pattern is the pattern code used for sending verification codes.
+    |
+    */
+    'ippanel' => [
+        'api_key' => env('IPPANEL_API_KEY'),
+        'sender_number' => env('IPPANEL_SENDER_NUMBER', '10003538264099'),
+        'verify_pattern' => env('IPPANEL_VERIFY_PATTERN', 'b4gofrp80wrccix'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\SmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -382,6 +383,127 @@ class AuthController extends Controller
             'message' => 'تم با موفقیت ذخیره شد',
             'data' => $this->formatUser($user->fresh()),
         ]);
+    }
+
+    /**
+     * Send an SMS verification code to the user's mobile for password reset.
+     */
+    public function sendSmsCode(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'username' => 'required|string',
+            'mobile' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $mobile = $this->convertPersianToEnglish($request->mobile);
+
+        // Normalize mobile: add leading 0 if missing
+        $firstCharacter = substr($mobile, 0, 1);
+        if ($firstCharacter !== '0') {
+            $mobile = '0' . $mobile;
+        }
+
+        $user = User::where('username', $request->username)
+            ->where('mobile', $mobile)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'مشخصات وارد شده نامعتبر است',
+                'errors' => [
+                    'username' => ['نام کاربری یا شماره همراه وارد شده معتبر نیست'],
+                ],
+            ], 404);
+        }
+
+        // Generate a random verification code
+        $code = (string) rand(10000, 99999);
+
+        // Store the code
+        $user->two_factor_secret = $code;
+        $user->save();
+
+        // Send SMS
+        $smsService = app(SmsService::class);
+        $sent = $smsService->sendVerificationCode($mobile, $code);
+
+        if (!$sent) {
+            return response()->json([
+                'message' => 'ارسال پیامک با مشکل مواجه شد. لطفاً بعداً تلاش کنید.',
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'کد تأیید به شماره همراه شما ارسال شد',
+        ]);
+    }
+
+    /**
+     * Verify the SMS code and allow password reset.
+     */
+    public function verifySmsCode(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'username' => 'required|string',
+            'code' => 'required|string|size:5',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = User::where('username', $request->username)->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'کاربر یافت نشد',
+            ], 404);
+        }
+
+        if (!$user->two_factor_secret) {
+            return response()->json([
+                'message' => 'ابتدا درخواست کد تأیید دهید',
+            ], 400);
+        }
+
+        if ($user->two_factor_secret !== $request->code) {
+            return response()->json([
+                'message' => 'کد تأیید نادرست است',
+                'errors' => [
+                    'code' => ['کد وارد شده صحیح نیست'],
+                ],
+            ], 422);
+        }
+
+        // Clear the code (one-time use)
+        $user->two_factor_secret = null;
+        $user->save();
+
+        // Generate a password reset token for the user
+        $token = Password::createToken($user);
+
+        return response()->json([
+            'message' => 'کد تأیید صحیح است',
+            'data' => [
+                'reset_token' => $token,
+                'email' => $user->email,
+            ],
+        ]);
+    }
+
+    /**
+     * Convert Persian/Arabic numerals to English numerals.
+     */
+    private function convertPersianToEnglish(string $string): string
+    {
+        $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        $english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+        return str_replace($persian, $english, $string);
     }
 
     /**

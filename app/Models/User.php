@@ -36,6 +36,7 @@ class User extends Authenticatable
         'role',
         'sign',
         'theme',
+        'two_factor_secret',
     ];
 
     /**

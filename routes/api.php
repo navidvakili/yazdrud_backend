@@ -19,9 +19,13 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
-// Password Reset
+// Password Reset (Email)
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
+// Password Reset (SMS)
+Route::post('/send-sms-code', [AuthController::class, 'sendSmsCode']);
+Route::post('/verify-sms-code', [AuthController::class, 'verifySmsCode']);
 
 // Public survey submission (no auth required)
 Route::post('/surveys', [\App\Http\Controllers\Api\SurveyController::class, 'store']);

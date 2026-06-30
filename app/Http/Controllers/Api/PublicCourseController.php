@@ -5,10 +5,33 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\CourseResource;
 use App\Models\Course;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class PublicCourseController extends Controller
 {
+    /**
+     * Apply date-based visibility rules:
+     * - Exclude courses that have already started (start_date <= today)
+     * - Exclude courses where registration hasn't opened yet (registration_start_date > today)
+     */
+    private function applyDateFilters($query): void
+    {
+        $today = Carbon::today();
+
+        // Rule 4: course already started → hide
+        $query->where(function ($q) use ($today) {
+            $q->whereNull('start_date')
+              ->orWhere('start_date', '>', $today);
+        });
+
+        // Rule 2: registration not yet open → hide
+        $query->where(function ($q) use ($today) {
+            $q->whereNull('registration_start_date')
+              ->orWhere('registration_start_date', '<=', $today);
+        });
+    }
+
     /**
      * Display a paginated listing of active courses with optional filters.
      *
@@ -22,6 +45,7 @@ class PublicCourseController extends Controller
     public function index(Request $request)
     {
         $query = Course::where('active', true);
+        $this->applyDateFilters($query);
 
         // Filter by category (title-based keyword matching)
         if ($request->filled('category')) {
@@ -89,22 +113,24 @@ class PublicCourseController extends Controller
      */
     public function featured()
     {
-        $courses = Course::where('active', true)
-            ->where('section', 'featured')
-            ->orderBy('created_at', 'desc')
+        $query = Course::where('active', true)
+            ->where('section', 'featured');
+        $this->applyDateFilters($query);
+        $courses = $query->orderBy('created_at', 'desc')
             ->take(6)
             ->get();
 
         // Fallback: if no courses with section=featured, use the old logic
         if ($courses->isEmpty()) {
-            $courses = Course::where('active', true)
-                ->where(function ($q) {
+            $fallback = Course::where('active', true);
+            $this->applyDateFilters($fallback);
+            $fallback->where(function ($q) {
                     $q->where('capacity', 0)
                       ->orWhereColumn('registered_count', '<', 'capacity');
                 })
                 ->orderBy('created_at', 'desc')
-                ->take(6)
-                ->get();
+                ->take(6);
+            $courses = $fallback->get();
         }
 
         return CourseResource::collection($courses);
@@ -122,22 +148,25 @@ class PublicCourseController extends Controller
      */
     public function preRegister()
     {
-        $courses = Course::where('section', 'pre_register')
-            ->orderBy('created_at', 'desc')
+        $query = Course::where('section', 'pre_register');
+        $this->applyDateFilters($query);
+        $courses = $query->orderBy('created_at', 'desc')
             ->take(4)
             ->get();
 
         // Fallback: use old logic if no section-based courses
         if ($courses->isEmpty()) {
-            $courses = Course::where('active', false)
+            $fallback = Course::query();
+            $this->applyDateFilters($fallback);
+            $fallback->where('active', false)
                 ->orWhere(function ($q) {
                     $q->where('active', true)
                       ->where('capacity', '>', 0)
                       ->whereColumn('registered_count', '>=', 'capacity');
                 })
                 ->orderBy('created_at', 'desc')
-                ->take(4)
-                ->get();
+                ->take(4);
+            $courses = $fallback->get();
         }
 
         return CourseResource::collection($courses);
@@ -155,22 +184,24 @@ class PublicCourseController extends Controller
      */
     public function free()
     {
-        $courses = Course::where('active', true)
-            ->where('section', 'free')
-            ->orderBy('created_at', 'desc')
+        $query = Course::where('active', true)
+            ->where('section', 'free');
+        $this->applyDateFilters($query);
+        $courses = $query->orderBy('created_at', 'desc')
             ->take(4)
             ->get();
 
         // Fallback
         if ($courses->isEmpty()) {
-            $courses = Course::where('active', true)
-                ->where(function ($q) {
+            $fallback = Course::where('active', true);
+            $this->applyDateFilters($fallback);
+            $fallback->where(function ($q) {
                     $q->where('amount', 0)
                       ->orWhereNull('amount');
                 })
                 ->orderBy('created_at', 'desc')
-                ->take(4)
-                ->get();
+                ->take(4);
+            $courses = $fallback->get();
         }
 
         return CourseResource::collection($courses);

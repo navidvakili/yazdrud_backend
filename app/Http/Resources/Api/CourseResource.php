@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use Carbon\Carbon;
 
 class CourseResource extends JsonResource
 {
@@ -18,6 +19,23 @@ class CourseResource extends JsonResource
             $status = 'full';
         } else {
             $status = 'soon';
+        }
+
+        // Determine registration period status
+        $today = Carbon::today();
+        $regStatus = 'none';
+        if ($this->registration_start_date && $this->registration_end_date) {
+            if ($this->registration_start_date > $today) {
+                $regStatus = 'before';
+            } elseif ($this->registration_end_date < $today) {
+                $regStatus = 'after';
+            } else {
+                $regStatus = 'open';
+            }
+        } elseif ($this->registration_start_date && !$this->registration_end_date) {
+            $regStatus = $this->registration_start_date <= $today ? 'open' : 'before';
+        } elseif (!$this->registration_start_date && $this->registration_end_date) {
+            $regStatus = $this->registration_end_date >= $today ? 'open' : 'after';
         }
 
         return [
@@ -39,8 +57,9 @@ class CourseResource extends JsonResource
             'status'          => $status,
             'banner'          => $this->getBannerGradient(),
             'image_url'       => $this->image_url,
-            'section'         => $this->section ?? 'normal',
-            'group_id'        => $this->group_id,
+            'section'              => $this->section ?? 'normal',
+            'registration_status'  => $regStatus,
+            'group_id'             => $this->group_id,
             'group_title'     => $this->group?->title,
             'instructor_name' => $this->courseInstructor?->name ?? $this->instructor,
             'instructor_id'   => $this->instructor_id,
