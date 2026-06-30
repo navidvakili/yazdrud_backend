@@ -90,13 +90,22 @@ class PublicCourseController extends Controller
     public function featured()
     {
         $courses = Course::where('active', true)
-            ->where(function ($q) {
-                $q->where('capacity', 0)
-                  ->orWhereColumn('registered_count', '<', 'capacity');
-            })
+            ->where('section', 'featured')
             ->orderBy('created_at', 'desc')
             ->take(6)
             ->get();
+
+        // Fallback: if no courses with section=featured, use the old logic
+        if ($courses->isEmpty()) {
+            $courses = Course::where('active', true)
+                ->where(function ($q) {
+                    $q->where('capacity', 0)
+                      ->orWhereColumn('registered_count', '<', 'capacity');
+                })
+                ->orderBy('created_at', 'desc')
+                ->take(6)
+                ->get();
+        }
 
         return CourseResource::collection($courses);
     }
@@ -113,15 +122,23 @@ class PublicCourseController extends Controller
      */
     public function preRegister()
     {
-        $courses = Course::where('active', false)
-            ->orWhere(function ($q) {
-                $q->where('active', true)
-                  ->where('capacity', '>', 0)
-                  ->whereColumn('registered_count', '>=', 'capacity');
-            })
+        $courses = Course::where('section', 'pre_register')
             ->orderBy('created_at', 'desc')
             ->take(4)
             ->get();
+
+        // Fallback: use old logic if no section-based courses
+        if ($courses->isEmpty()) {
+            $courses = Course::where('active', false)
+                ->orWhere(function ($q) {
+                    $q->where('active', true)
+                      ->where('capacity', '>', 0)
+                      ->whereColumn('registered_count', '>=', 'capacity');
+                })
+                ->orderBy('created_at', 'desc')
+                ->take(4)
+                ->get();
+        }
 
         return CourseResource::collection($courses);
     }
@@ -139,13 +156,22 @@ class PublicCourseController extends Controller
     public function free()
     {
         $courses = Course::where('active', true)
-            ->where(function ($q) {
-                $q->where('amount', 0)
-                  ->orWhereNull('amount');
-            })
+            ->where('section', 'free')
             ->orderBy('created_at', 'desc')
             ->take(4)
             ->get();
+
+        // Fallback
+        if ($courses->isEmpty()) {
+            $courses = Course::where('active', true)
+                ->where(function ($q) {
+                    $q->where('amount', 0)
+                      ->orWhereNull('amount');
+                })
+                ->orderBy('created_at', 'desc')
+                ->take(4)
+                ->get();
+        }
 
         return CourseResource::collection($courses);
     }
