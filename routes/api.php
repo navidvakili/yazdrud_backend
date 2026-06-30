@@ -144,6 +144,15 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/{id}', [\App\Http\Controllers\Api\CourseGroupController::class, 'destroy']);
     });
 
+    // ==================== Instructors (اساتید دوره‌ها) ====================
+    Route::prefix('instructors')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\InstructorController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\InstructorController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\InstructorController::class, 'show']);
+        Route::put('/{id}', [\App\Http\Controllers\Api\InstructorController::class, 'update']);
+        Route::delete('/{id}', [\App\Http\Controllers\Api\InstructorController::class, 'destroy']);
+    });
+
     // ==================== Certificates (صدور گواهی دوره‌ها) ====================
     Route::prefix('certificates')->group(function () {
         // Static routes MUST come before parameterized routes
