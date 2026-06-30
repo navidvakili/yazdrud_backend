@@ -114,7 +114,7 @@ class PublicCourseController extends Controller
     public function featured()
     {
         $query = Course::where('active', true)
-            ->where('section', 'featured');
+            ->whereJsonContains('sections', 'featured');
         $this->applyDateFilters($query);
         $courses = $query->orderBy('created_at', 'desc')
             ->take(6)
@@ -135,7 +135,7 @@ class PublicCourseController extends Controller
      */
     public function preRegister()
     {
-        $query = Course::where('section', 'pre_register');
+        $query = Course::whereJsonContains('sections', 'pre_register');
         $this->applyDateFilters($query);
         $courses = $query->orderBy('created_at', 'desc')
             ->take(4)
@@ -172,7 +172,7 @@ class PublicCourseController extends Controller
     public function free()
     {
         $query = Course::where('active', true)
-            ->where('section', 'free');
+            ->whereJsonContains('sections', 'free');
         $this->applyDateFilters($query);
         $courses = $query->orderBy('created_at', 'desc')
             ->take(4)

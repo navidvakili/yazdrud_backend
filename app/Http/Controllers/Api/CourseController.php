@@ -54,7 +54,7 @@ class CourseController extends Controller
             'id'               => $course->id,
             'group_id'         => $course->group_id,
             'group_title'      => $course->group?->title,
-            'section'          => $course->section ?? 'normal',
+            'section'          => $course->sections ?? ['normal'],
             'title'            => $course->title,
             'amount'           => $course->amount,
             'amount_formatted' => number_format(intval($course->amount)),
@@ -150,7 +150,7 @@ class CourseController extends Controller
 
         // Filter by section (main page placement)
         if ($request->has('section')) {
-            $query->where('section', $request->section);
+            $query->whereJsonContains('sections', $request->section);
         }
 
         // Filter by active status
@@ -218,7 +218,8 @@ class CourseController extends Controller
             'title'        => 'required|string|max:255',
             'amount'       => 'required|numeric|min:0',
             'active'       => 'required|in:0,1,true,false',
-            'section'      => 'nullable|string|in:normal,featured,pre_register,free',
+            'section'      => 'nullable|array',
+            'section.*'    => 'in:normal,featured,pre_register,free',
             'image'        => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'description'  => 'nullable|string',
             'syllabus'     => 'nullable|string',
@@ -239,7 +240,7 @@ class CourseController extends Controller
             'amount.min'           => 'مبلغ شهریه نمی‌تواند منفی باشد',
             'active.required'      => 'وضعیت دوره الزامی است',
             'active.in'            => 'وضعیت دوره باید فعال یا غیرفعال باشد',
-            'section.in'           => 'دسته‌بندی صفحه اصلی نامعتبر است',
+            'section.*.in'         => 'دسته‌بندی صفحه اصلی نامعتبر است',
             'image.image'          => 'فایل تصویر باید از نوع تصویر باشد',
             'image.mimes'          => 'فرمت تصویر باید jpeg, png, jpg یا gif باشد',
             'image.max'            => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد',
@@ -269,7 +270,7 @@ class CourseController extends Controller
 
         $course = new Course();
         $course->group_id      = $request->group_id;
-        $course->section       = $request->section ?? 'normal';
+        $course->sections      = $request->input('section', ['normal']);
         $course->title         = $request->title;
         $course->amount        = str_replace(',', '', (string) $request->amount);
         $course->active        = filter_var($request->active, FILTER_VALIDATE_BOOLEAN);
@@ -350,7 +351,8 @@ class CourseController extends Controller
             'title'        => 'sometimes|required|string|max:255',
             'amount'       => 'sometimes|required|numeric|min:0',
             'active'       => 'sometimes|required|in:0,1,true,false',
-            'section'      => 'nullable|string|in:normal,featured,pre_register,free',
+            'section'      => 'nullable|array',
+            'section.*'    => 'in:normal,featured,pre_register,free',
             'image'        => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'description'  => 'nullable|string',
             'syllabus'     => 'nullable|string',
@@ -371,7 +373,7 @@ class CourseController extends Controller
             'amount.min'           => 'مبلغ شهریه نمی‌تواند منفی باشد',
             'active.required'      => 'وضعیت دوره الزامی است',
             'active.in'            => 'وضعیت دوره باید فعال یا غیرفعال باشد',
-            'section.in'           => 'دسته‌بندی صفحه اصلی نامعتبر است',
+            'section.*.in'         => 'دسته‌بندی صفحه اصلی نامعتبر است',
             'image.image'          => 'فایل تصویر باید از نوع تصویر باشد',
             'image.mimes'          => 'فرمت تصویر باید jpeg, png, jpg یا gif باشد',
             'image.max'            => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد',
@@ -424,7 +426,7 @@ class CourseController extends Controller
             $course->instructor_id = $request->instructor_id;
         }
         if ($request->has('section')) {
-            $course->section = $request->section;
+            $course->sections = $request->input('section', ['normal']);
         }
         if ($request->has('group_id')) {
             $course->group_id = $request->group_id;
