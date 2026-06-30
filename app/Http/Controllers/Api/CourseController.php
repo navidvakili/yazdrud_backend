@@ -21,6 +21,20 @@ class CourseController extends Controller
     {
         if (!$date) return null;
         try {
+            // Detect if date is already in Jalali format (year 1200-1500)
+            $first4 = substr($date, 0, 4);
+            if (is_numeric($first4)) {
+                $year = (int) $first4;
+                if ($year >= 1200 && $year <= 1500) {
+                    // Already Jalali — just normalize separators
+                    $clean = str_replace('/', '-', $date);
+                    $parts = explode('-', $clean);
+                    if (count($parts) >= 3) {
+                        return sprintf('%04d/%02d/%02d', (int)$parts[0], (int)$parts[1], (int)$parts[2]);
+                    }
+                }
+            }
+            // Gregorian date — convert to Jalali
             return (new Verta($date))->format($format);
         } catch (\Exception $e) {
             return null;
