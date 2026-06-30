@@ -78,9 +78,10 @@ class RegistrationController extends Controller
             'email'           => 'nullable|email',
             'type'            => 'required|in:1,2',
             'id_edu'          => 'nullable|string',
-            'skills'          => 'nullable|string',
-            'motivation'      => 'nullable|string',
-            'payment_method'  => 'required|in:online,bank',
+            'skills'                   => 'nullable|string',
+            'motivation'               => 'nullable|string',
+            'payment_method'           => 'required|in:online,bank',
+            'existing_enrollment_code' => 'nullable|string|size:7',
         ]);
 
         // Check for existing registration
@@ -142,8 +143,8 @@ class RegistrationController extends Controller
                     'register_id'    => $register->id,
                 ]);
 
-                // Generate enrollment code inside transaction
-                $enrollmentCode = $this->enrollmentCodeGenerator->generate();
+                // Generate enrollment code inside transaction (reuse existing if provided)
+                $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->enrollmentCodeGenerator->generate();
                 $register->update(['enrollment_code' => $enrollmentCode]);
 
                 DB::commit();
@@ -184,16 +185,17 @@ class RegistrationController extends Controller
                         'card_number'   => '0',
                         'status'        => 'PENDING',
                         'description'   => json_encode([
-                            'course_id'      => $validated['course_id'],
-                            'kodmeli'        => $this->convertPersianToEnglish($validated['kodmeli']),
-                            'fullname'       => $validated['fullname'],
-                            'type'           => $validated['type'],
-                            'mobile'         => $this->convertPersianToEnglish($validated['mobile']),
-                            'email'          => $validated['email'] ?? null,
-                            'id_edu'         => $validated['id_edu'] ?? null,
-                            'skills'         => $validated['skills'] ?? null,
-                            'motivation'     => $validated['motivation'] ?? null,
-                            'payment_method' => $validated['payment_method'],
+                            'course_id'                => $validated['course_id'],
+                            'kodmeli'                  => $this->convertPersianToEnglish($validated['kodmeli']),
+                            'fullname'                 => $validated['fullname'],
+                            'type'                     => $validated['type'],
+                            'mobile'                   => $this->convertPersianToEnglish($validated['mobile']),
+                            'email'                    => $validated['email'] ?? null,
+                            'id_edu'                   => $validated['id_edu'] ?? null,
+                            'skills'                   => $validated['skills'] ?? null,
+                            'motivation'               => $validated['motivation'] ?? null,
+                            'payment_method'           => $validated['payment_method'],
+                            'existing_enrollment_code' => $validated['existing_enrollment_code'] ?? null,
                         ]),
                         'ip'            => $request->ip(),
                         'payment_date'  => Carbon::now(),
@@ -251,8 +253,8 @@ class RegistrationController extends Controller
                 'register_id'    => $register->id,
             ]);
 
-            // Generate enrollment code inside transaction
-            $enrollmentCode = $this->enrollmentCodeGenerator->generate();
+            // Generate enrollment code inside transaction (reuse existing if provided)
+            $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->enrollmentCodeGenerator->generate();
             $register->update(['enrollment_code' => $enrollmentCode]);
 
             DB::commit();
@@ -403,8 +405,8 @@ class RegistrationController extends Controller
                     'card_number'   => $request->input('maskedPan', ''),
                 ]);
 
-                // Generate enrollment code inside transaction
-                $enrollmentCode = $this->enrollmentCodeGenerator->generate();
+                // Generate enrollment code inside transaction (reuse existing if provided)
+                $enrollmentCode = $regData['existing_enrollment_code'] ?? $this->enrollmentCodeGenerator->generate();
                 $register->update(['enrollment_code' => $enrollmentCode]);
 
                 DB::commit();
