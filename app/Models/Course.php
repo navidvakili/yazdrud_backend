@@ -23,6 +23,8 @@ class Course extends Model
         'instructor_id',
         'start_date',
         'end_date',
+        'registration_start_date',
+        'registration_end_date',
         'capacity',
         'registered_count',
     ];
@@ -31,6 +33,8 @@ class Course extends Model
         'active' => 'boolean',
         'start_date' => 'date',
         'end_date' => 'date',
+        'registration_start_date' => 'date',
+        'registration_end_date' => 'date',
         'amount' => 'string',
         'section' => 'string',
     ];

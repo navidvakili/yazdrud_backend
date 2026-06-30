@@ -53,9 +53,11 @@ class CourseController extends Controller
             'instructor'       => $course->instructor,
             'instructor_id'    => $course->instructor_id,
             'instructor_name'  => $course->courseInstructor?->name,
-            'start_date'       => $this->toJalali($course->start_date),
-            'end_date'         => $this->toJalali($course->end_date),
-            'capacity'         => $course->capacity,
+            'start_date'              => $this->toJalali($course->start_date),
+            'end_date'                => $this->toJalali($course->end_date),
+            'registration_start_date' => $this->toJalali($course->registration_start_date),
+            'registration_end_date'   => $this->toJalali($course->registration_end_date),
+            'capacity'                => $course->capacity,
             'registered_count' => $totalRegistrations,
             'confirmed_count'  => $confirmedCount,
             'remaining'        => $course->remaining_capacity,
@@ -212,7 +214,9 @@ class CourseController extends Controller
             'group_id'     => 'nullable|integer|exists:course_groups,id',
             'start_date'   => 'nullable|date_format:Y/m/d',
             'end_date'     => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
-            'capacity'     => 'nullable|integer|min:0',
+            'registration_start_date' => 'nullable|date_format:Y/m/d',
+            'registration_end_date'   => 'nullable|date_format:Y/m/d|after_or_equal:registration_start_date',
+            'capacity'                => 'nullable|integer|min:0',
         ], [
             'title.required'       => 'عنوان دوره الزامی است',
             'title.max'            => 'عنوان دوره نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
@@ -235,6 +239,9 @@ class CourseController extends Controller
             'start_date.date_format' => 'فرمت تاریخ شروع باید سال/ماه/روز باشد',
             'end_date.date_format'   => 'فرمت تاریخ پایان باید سال/ماه/روز باشد',
             'end_date.after_or_equal' => 'تاریخ پایان باید بعد یا برابر تاریخ شروع باشد',
+            'registration_start_date.date_format' => 'فرمت تاریخ شروع ثبت‌نام باید سال/ماه/روز باشد',
+            'registration_end_date.date_format'   => 'فرمت تاریخ پایان ثبت‌نام باید سال/ماه/روز باشد',
+            'registration_end_date.after_or_equal' => 'تاریخ پایان ثبت‌نام باید بعد یا برابر تاریخ شروع ثبت‌نام باشد',
             'capacity.integer'     => 'ظرفیت باید عدد صحیح باشد',
             'capacity.min'         => 'ظرفیت نمی‌تواند منفی باشد',
         ]);
@@ -278,6 +285,26 @@ class CourseController extends Controller
                 ], 422);
             }
         }
+        if ($request->registration_start_date) {
+            try {
+                $course->registration_start_date = Verta::parse(str_replace('/', '-', $request->registration_start_date))->formatGregorian('Y-m-d');
+            } catch (\Exception $e) {
+                return response()->json([
+                    'message' => 'فرمت تاریخ شروع ثبت‌نام نامعتبر است',
+                    'errors'  => ['registration_start_date' => ['فرمت تاریخ نامعتبر است']],
+                ], 422);
+            }
+        }
+        if ($request->registration_end_date) {
+            try {
+                $course->registration_end_date = Verta::parse(str_replace('/', '-', $request->registration_end_date))->formatGregorian('Y-m-d');
+            } catch (\Exception $e) {
+                return response()->json([
+                    'message' => 'فرمت تاریخ پایان ثبت‌نام نامعتبر است',
+                    'errors'  => ['registration_end_date' => ['فرمت تاریخ نامعتبر است']],
+                ], 422);
+            }
+        }
 
         $course->capacity         = $request->capacity ?? 0;
         $course->registered_count = 0;
@@ -317,9 +344,9 @@ class CourseController extends Controller
             'instructor'   => 'nullable|string|max:255',
             'instructor_id' => 'nullable|integer|exists:course_instructors,id',
             'group_id'     => 'nullable|integer|exists:course_groups,id',
-            'start_date'   => 'nullable|date_format:Y/m/d',
-            'end_date'     => 'nullable|date_format:Y/m/d|after_or_equal:start_date',
-            'capacity'     => 'nullable|integer|min:0',
+            'registration_start_date' => 'nullable|date_format:Y/m/d',
+            'registration_end_date'   => 'nullable|date_format:Y/m/d|after_or_equal:registration_start_date',
+            'capacity'                => 'nullable|integer|min:0',
         ], [
             'title.required'       => 'عنوان دوره الزامی است',
             'title.max'            => 'عنوان دوره نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
@@ -342,6 +369,9 @@ class CourseController extends Controller
             'start_date.date_format' => 'فرمت تاریخ شروع باید سال/ماه/روز باشد',
             'end_date.date_format'   => 'فرمت تاریخ پایان باید سال/ماه/روز باشد',
             'end_date.after_or_equal' => 'تاریخ پایان باید بعد یا برابر تاریخ شروع باشد',
+            'registration_start_date.date_format' => 'فرمت تاریخ شروع ثبت‌نام باید سال/ماه/روز باشد',
+            'registration_end_date.date_format'   => 'فرمت تاریخ پایان ثبت‌نام باید سال/ماه/روز باشد',
+            'registration_end_date.after_or_equal' => 'تاریخ پایان ثبت‌نام باید بعد یا برابر تاریخ شروع ثبت‌نام باشد',
             'capacity.integer'     => 'ظرفیت باید عدد صحیح باشد',
             'capacity.min'         => 'ظرفیت نمی‌تواند منفی باشد',
         ]);
@@ -409,6 +439,34 @@ class CourseController extends Controller
                 }
             } else {
                 $course->end_date = null;
+            }
+        }
+        if ($request->has('registration_start_date')) {
+            if ($request->registration_start_date) {
+                try {
+                    $course->registration_start_date = Verta::parse(str_replace('/', '-', $request->registration_start_date))->formatGregorian('Y-m-d');
+                } catch (\Exception $e) {
+                    return response()->json([
+                        'message' => 'فرمت تاریخ شروع ثبت‌نام نامعتبر است',
+                        'errors'  => ['registration_start_date' => ['فرمت تاریخ نامعتبر است']],
+                    ], 422);
+                }
+            } else {
+                $course->registration_start_date = null;
+            }
+        }
+        if ($request->has('registration_end_date')) {
+            if ($request->registration_end_date) {
+                try {
+                    $course->registration_end_date = Verta::parse(str_replace('/', '-', $request->registration_end_date))->formatGregorian('Y-m-d');
+                } catch (\Exception $e) {
+                    return response()->json([
+                        'message' => 'فرمت تاریخ پایان ثبت‌نام نامعتبر است',
+                        'errors'  => ['registration_end_date' => ['فرمت تاریخ نامعتبر است']],
+                    ], 422);
+                }
+            } else {
+                $course->registration_end_date = null;
             }
         }
         if ($request->has('capacity')) {
