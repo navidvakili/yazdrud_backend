@@ -48,6 +48,9 @@ Route::get('/public/courses/{id}', [\App\Http\Controllers\Api\PublicCourseContro
 // ==================== Public Site Stats ====================
 Route::get('/public/stats', [\App\Http\Controllers\Api\PublicCourseController::class, 'stats']);
 
+// ==================== Public Course Groups ====================
+Route::get('/public/course-groups', [\App\Http\Controllers\Api\CourseGroupController::class, 'index']);
+
 // ==================== Public Registrations API (for frontend website) ====================
 // NOTE: lookup MUST come before {id} to avoid route conflict
 Route::get('/registrations', [\App\Http\Controllers\Api\RegistrationController::class, 'index']);

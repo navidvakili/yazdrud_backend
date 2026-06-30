@@ -30,6 +30,7 @@ class CourseResource extends JsonResource
             'capacity'        => (int) $this->capacity,
             'registeredCount' => (int) $this->registered_count,
             'startDate'       => $this->start_date ? $this->formatShamsiDate($this->start_date) : 'نامشخص',
+            'end_date'        => $this->end_date ? $this->formatShamsiDate($this->end_date) : null,
             'daysOfWeek'      => [],
             'location'        => '',
             'description'     => $this->description ?? '',
@@ -38,6 +39,17 @@ class CourseResource extends JsonResource
             'status'          => $status,
             'banner'          => $this->getBannerGradient(),
             'image_url'       => $this->image_url,
+            'section'         => $this->section ?? 'normal',
+            'group_id'        => $this->group_id,
+            'group_title'     => $this->group?->title,
+            'instructor_name' => $this->courseInstructor?->name ?? $this->instructor,
+            'instructor_id'   => $this->instructor_id,
+            'registration_start_date' => $this->registration_start_date
+                ? $this->formatShamsiDate($this->registration_start_date)
+                : null,
+            'registration_end_date'   => $this->registration_end_date
+                ? $this->formatShamsiDate($this->registration_end_date)
+                : null,
             'created_at'      => $this->created_at ? $this->created_at->toISOString() : null,
         ];
     }
