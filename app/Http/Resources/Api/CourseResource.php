@@ -50,11 +50,12 @@ class CourseResource extends JsonResource
             'registeredCount' => (int) $this->registered_count,
             'startDate'       => $this->start_date ? $this->formatShamsiDate($this->start_date) : 'نامشخص',
             'end_date'        => $this->end_date ? $this->formatShamsiDate($this->end_date) : null,
-            'daysOfWeek'      => [],
-            'location'        => '',
+            'daysOfWeek'      => $this->days_of_week ?? [],
+            'courseTime'      => $this->course_time ?? '',
+            'location'        => $this->location ?? '',
             'description'     => $this->description ?? '',
             'syllabus'        => $this->parseSyllabus(),
-            'prerequisites'   => ['آشنایی مقدماتی با مفاهیم مرتبط'],
+            'prerequisites'   => $this->parsePrerequisites(),
             'status'          => $status,
             'banner'          => $this->getBannerGradient(),
             'image_url'       => $this->image_url,
@@ -101,6 +102,17 @@ class CourseResource extends JsonResource
             return array_values($lines);
         }
         return [];
+    }
+
+    private function parsePrerequisites(): array
+    {
+        if (!empty($this->prerequisites)) {
+            $lines = explode("\n", $this->prerequisites);
+            $lines = array_map('trim', $lines);
+            $lines = array_filter($lines);
+            return array_values($lines);
+        }
+        return ['آشنایی مقدماتی با مفاهیم مرتبط'];
     }
 
     private function getBannerGradient(): string

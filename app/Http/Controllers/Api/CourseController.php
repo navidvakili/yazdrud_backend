@@ -64,6 +64,10 @@ class CourseController extends Controller
             'syllabus'         => $course->syllabus,
             'duration'         => $course->duration,
             'duration_text'    => $course->duration ? "{$course->duration} ساعت" : null,
+            'days_of_week'     => $course->days_of_week ?? [],
+            'course_time'      => $course->course_time,
+            'location'         => $course->location,
+            'prerequisites'    => $course->prerequisites,
             'instructor'       => $course->instructor,
             'instructor_id'    => $course->instructor_id,
             'instructor_name'  => $course->courseInstructor?->name,
@@ -232,6 +236,11 @@ class CourseController extends Controller
             'registration_start_date' => 'nullable|date_format:Y/m/d',
             'registration_end_date'   => 'nullable|date_format:Y/m/d|after_or_equal:registration_start_date',
             'capacity'                => 'nullable|integer|min:0',
+            'days_of_week'            => 'nullable|array',
+            'days_of_week.*'          => 'string|max:50',
+            'course_time'             => 'nullable|string|max:255',
+            'location'                => 'nullable|string|max:500',
+            'prerequisites'           => 'nullable|string',
         ], [
             'title.required'       => 'عنوان دوره الزامی است',
             'title.max'            => 'عنوان دوره نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
@@ -324,6 +333,11 @@ class CourseController extends Controller
         $course->capacity         = $request->capacity ?? 0;
         $course->registered_count = 0;
 
+        $course->days_of_week  = $request->input('days_of_week', []);
+        $course->course_time   = $request->course_time;
+        $course->location      = $request->location;
+        $course->prerequisites = $request->prerequisites;
+
         if ($request->hasFile('image')) {
             $imagePath     = $request->file('image')->store('courses', 'public');
             $course->image = $imagePath;
@@ -365,6 +379,11 @@ class CourseController extends Controller
             'registration_start_date' => 'nullable|date_format:Y/m/d',
             'registration_end_date'   => 'nullable|date_format:Y/m/d|after_or_equal:registration_start_date',
             'capacity'                => 'nullable|integer|min:0',
+            'days_of_week'            => 'nullable|array',
+            'days_of_week.*'          => 'string|max:50',
+            'course_time'             => 'nullable|string|max:255',
+            'location'                => 'nullable|string|max:500',
+            'prerequisites'           => 'nullable|string',
         ], [
             'title.required'       => 'عنوان دوره الزامی است',
             'title.max'            => 'عنوان دوره نمی‌تواند بیش از ۲۵۵ کاراکتر باشد',
@@ -489,6 +508,19 @@ class CourseController extends Controller
         }
         if ($request->has('capacity')) {
             $course->capacity = $request->capacity ?? 0;
+        }
+
+        if ($request->has('days_of_week')) {
+            $course->days_of_week = $request->input('days_of_week', []);
+        }
+        if ($request->has('course_time')) {
+            $course->course_time = $request->course_time;
+        }
+        if ($request->has('location')) {
+            $course->location = $request->location;
+        }
+        if ($request->has('prerequisites')) {
+            $course->prerequisites = $request->prerequisites;
         }
 
         if ($request->hasFile('image')) {

@@ -28,6 +28,10 @@ class Course extends Model
         'registration_end_date',
         'capacity',
         'registered_count',
+        'days_of_week',
+        'course_time',
+        'location',
+        'prerequisites',
     ];
 
     protected $casts = [
@@ -39,6 +43,7 @@ class Course extends Model
         'amount' => 'string',
         'section' => 'string',
         'sections' => 'array',
+        'days_of_week' => 'array',
     ];
 
     /**
