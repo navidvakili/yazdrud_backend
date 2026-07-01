@@ -28,7 +28,7 @@ class PublicCourseController extends Controller
                   $q2->where('start_date', '<=', $today)
                      ->where(function ($q3) use ($today) {
                          $q3->whereNull('end_date')          // No end date → still active
-                            ->orWhere('end_date', '>', $today);  // End date in future → still active
+                            ->orWhere('end_date', '>=', $today);  // End date is today or future → still active
                      });
               });
         });
