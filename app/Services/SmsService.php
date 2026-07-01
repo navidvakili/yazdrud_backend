@@ -100,7 +100,7 @@ class SmsService
      * Falls back silently if the pattern is not configured.
      *
      * @param string $mobile Recipient mobile number
-     * @param string $enrollmentCode The 8-char enrollment code
+     * @param string $enrollmentCode The 7-digit enrollment code
      * @param string $fullName The student's full name
      * @param string $courseTitle The course title
      * @return bool

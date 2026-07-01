@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 use Carbon\Carbon;
+use Hekmatinasser\Verta\Verta;
 
 class CourseResource extends JsonResource
 {
@@ -115,18 +116,23 @@ class CourseResource extends JsonResource
         return $gradients[array_rand($gradients)];
     }
 
-    private function formatShamsiDate(?string $date): string
+    private function formatShamsiDate($date): string
     {
         if (!$date) return 'نامشخص';
         try {
-            $parts = explode('-', $date);
-            if (count($parts) !== 3) return $date;
-
-            $v = new \Hekmatinasser\Verta\Verta();
-            $v->setDateJalali((int) $parts[0], (int) $parts[1], (int) $parts[2]);
-            return $v->format('l d F Y');
+            if ($date instanceof Carbon) {
+                // Date is a Carbon instance (Gregorian from MySQL DATE column) → convert to Jalali
+                $v = new Verta($date->toDateString());
+            } else {
+                // Fallback: parse as string
+                $parts = explode('-', $date);
+                if (count($parts) !== 3) return $date;
+                $v = new Verta();
+                $v->setDateJalali((int) $parts[0], (int) $parts[1], (int) $parts[2]);
+            }
+            return $v->format('Y/m/d');
         } catch (\Exception $e) {
-            return $date;
+            return (string) $date;
         }
     }
 }

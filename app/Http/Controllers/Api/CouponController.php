@@ -8,6 +8,7 @@ use App\Models\Course;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Hekmatinasser\Verta\Verta;
 
 class CouponController extends Controller
 {
@@ -254,10 +255,10 @@ class CouponController extends Controller
             ]);
         }
 
-        // Check date validity
+        // Check date validity (dates are stored in Jalali format)
+        $todayJalali = Verta::now()->format('Y/m/d');
         if ($coupon->start_date && $coupon->start_date !== '0') {
-            $now = now()->format('Y/m/d');
-            if ($now < $coupon->start_date) {
+            if ($todayJalali < $coupon->start_date) {
                 return response()->json([
                     'valid'   => false,
                     'message' => 'این بن تخفیف هنوز فعال نشده است.',
@@ -265,8 +266,7 @@ class CouponController extends Controller
             }
         }
         if ($coupon->finish_date && $coupon->finish_date !== '0') {
-            $now = now()->format('Y/m/d');
-            if ($now > $coupon->finish_date) {
+            if ($todayJalali > $coupon->finish_date) {
                 return response()->json([
                     'valid'   => false,
                     'message' => 'این بن تخفیف منقضی شده است.',

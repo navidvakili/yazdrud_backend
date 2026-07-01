@@ -66,6 +66,9 @@ Route::get('/registrations/{id}', [\App\Http\Controllers\Api\RegistrationControl
 Route::put('/registrations/{id}/status', [\App\Http\Controllers\Api\RegistrationController::class, 'updateStatus']);
 Route::delete('/registrations/{id}', [\App\Http\Controllers\Api\RegistrationController::class, 'destroy']);
 
+// ==================== Public Coupon Validation (used by registration form) ====================
+Route::post('/coupons/validate', [\App\Http\Controllers\Api\CouponController::class, 'validate']);
+
 // ==================== Authenticated Routes ====================
 Route::middleware('auth:api')->group(function () {
     // Current user
@@ -135,7 +138,6 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('coupons')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\CouponController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Api\CouponController::class, 'store']);
-        Route::post('/validate', [\App\Http\Controllers\Api\CouponController::class, 'validate']);
         Route::get('/generate-code', [\App\Http\Controllers\Api\CouponController::class, 'generateCode']);
         Route::post('/generate', [\App\Http\Controllers\Api\CouponController::class, 'generate']);
         Route::get('/courses', [\App\Http\Controllers\Api\CouponController::class, 'courses']);
