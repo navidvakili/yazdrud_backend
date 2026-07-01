@@ -86,10 +86,13 @@ class Course extends Model
      */
     public function getImageUrlAttribute()
     {
-        if ($this->image && file_exists(public_path('storage/' . $this->image))) {
-            return asset('storage/' . $this->image);
+        if ($this->image) {
+            $path = public_path('storage/' . $this->image);
+            if (file_exists($path)) {
+                return asset('storage/' . $this->image);
+            }
         }
-        return asset('images/default-course.jpg');
+        return asset('images/default-course.svg');
     }
 
     /**

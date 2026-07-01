@@ -12,20 +12,28 @@ class PublicCourseController extends Controller
 {
     /**
      * Apply date-based visibility rules:
-     * - Exclude courses that have already started (start_date <= today)
+     * - Exclude courses that have fully concluded (start_date AND end_date both in the past)
      * - Exclude courses where registration hasn't opened yet (registration_start_date > today)
      */
     private function applyDateFilters($query): void
     {
         $today = Carbon::today();
 
-        // Rule 4: course already started → hide
+        // Only hide courses that have fully concluded (both start and end are past)
         $query->where(function ($q) use ($today) {
-            $q->whereNull('start_date')
-              ->orWhere('start_date', '>', $today);
+            $q->whereNull('start_date')       // No start date → always show
+              ->orWhere('start_date', '>', $today)  // Future start → show
+              ->orWhere(function ($q2) use ($today) {
+                  // Started but hasn't ended yet → still show
+                  $q2->where('start_date', '<=', $today)
+                     ->where(function ($q3) use ($today) {
+                         $q3->whereNull('end_date')          // No end date → still active
+                            ->orWhere('end_date', '>', $today);  // End date in future → still active
+                     });
+              });
         });
 
-        // Rule 2: registration not yet open → hide
+        // Registration not yet open → hide
         $query->where(function ($q) use ($today) {
             $q->whereNull('registration_start_date')
               ->orWhere('registration_start_date', '<=', $today);
