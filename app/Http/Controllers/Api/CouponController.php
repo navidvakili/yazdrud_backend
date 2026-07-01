@@ -106,7 +106,7 @@ class CouponController extends Controller
             'finish_date'   => 'nullable|string|max:191',
             'is_active'     => 'nullable|boolean',
             'max_discount'  => 'nullable|integer|min:0',
-            'national_code' => 'nullable|string|max:20',
+            'national_code' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -161,7 +161,7 @@ class CouponController extends Controller
             'finish_date'   => 'nullable|string|max:191',
             'is_active'     => 'nullable|boolean',
             'max_discount'  => 'nullable|integer|min:0',
-            'national_code' => 'nullable|string|max:20',
+            'national_code' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -223,7 +223,7 @@ class CouponController extends Controller
         $validator = Validator::make($request->all(), [
             'code'          => 'required|string|max:191',
             'course_id'     => 'nullable|exists:courses,id',
-            'national_code' => 'nullable|string|max:20',
+            'national_code' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
