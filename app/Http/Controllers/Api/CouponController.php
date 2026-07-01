@@ -34,6 +34,8 @@ class CouponController extends Controller
             'start_date'     => $coupon->start_date,
             'finish_date'    => $coupon->finish_date,
             'is_active'      => $coupon->is_active,
+            'max_discount'   => $coupon->max_discount,
+            'national_code'  => $coupon->national_code,
             'created_at'     => $coupon->created_at?->format('Y/m/d H:i'),
             'updated_at'     => $coupon->updated_at?->format('Y/m/d H:i'),
         ];
@@ -102,6 +104,8 @@ class CouponController extends Controller
             'start_date'    => 'nullable|string|max:191',
             'finish_date'   => 'nullable|string|max:191',
             'is_active'     => 'nullable|boolean',
+            'max_discount'  => 'nullable|integer|min:0',
+            'national_code' => 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
@@ -122,6 +126,8 @@ class CouponController extends Controller
         $coupon->start_date    = $request->start_date ?? '';
         $coupon->finish_date   = $request->finish_date ?? '';
         $coupon->is_active     = $request->boolean('is_active', true);
+        $coupon->max_discount  = $request->max_discount;
+        $coupon->national_code = $request->national_code;
         $coupon->save();
 
         return response()->json([
@@ -153,6 +159,8 @@ class CouponController extends Controller
             'start_date'    => 'nullable|string|max:191',
             'finish_date'   => 'nullable|string|max:191',
             'is_active'     => 'nullable|boolean',
+            'max_discount'  => 'nullable|integer|min:0',
+            'national_code' => 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
@@ -171,6 +179,8 @@ class CouponController extends Controller
         if ($request->has('start_date')) $coupon->start_date = $request->start_date;
         if ($request->has('finish_date')) $coupon->finish_date = $request->finish_date;
         if ($request->has('is_active')) $coupon->is_active = $request->boolean('is_active');
+        if ($request->has('max_discount')) $coupon->max_discount = $request->max_discount;
+        if ($request->has('national_code')) $coupon->national_code = $request->national_code;
         $coupon->save();
 
         return response()->json([
@@ -210,8 +220,9 @@ class CouponController extends Controller
     public function validate(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'code'      => 'required|string|max:191',
-            'course_id' => 'nullable|exists:courses,id',
+            'code'          => 'required|string|max:191',
+            'course_id'     => 'nullable|exists:courses,id',
+            'national_code' => 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
@@ -273,6 +284,16 @@ class CouponController extends Controller
             }
         }
 
+        // Check national code restriction
+        if ($coupon->national_code && $request->filled('national_code')) {
+            if ($coupon->national_code !== $request->national_code) {
+                return response()->json([
+                    'valid'   => false,
+                    'message' => 'این بن تخفیف فقط برای کد ملی مشخص‌شده قابل استفاده است.',
+                ]);
+            }
+        }
+
         // Calculate discount
         $discount = 0;
         $courseAmount = 0;
@@ -286,6 +307,11 @@ class CouponController extends Controller
                     $discount = $coupon->value;
                 }
             }
+        }
+
+        // Apply max_discount cap
+        if ($coupon->max_discount && $discount > $coupon->max_discount) {
+            $discount = (int) $coupon->max_discount;
         }
 
         return response()->json([
@@ -344,6 +370,8 @@ class CouponController extends Controller
             'start_date'    => 'nullable|string|max:191',
             'finish_date'   => 'nullable|string|max:191',
             'is_active'     => 'nullable|boolean',
+            'max_discount'  => 'nullable|integer|min:0',
+            'national_code' => 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
@@ -374,6 +402,8 @@ class CouponController extends Controller
         $coupon->start_date    = $request->start_date ?? '';
         $coupon->finish_date   = $request->finish_date ?? '';
         $coupon->is_active     = $request->boolean('is_active', true);
+        $coupon->max_discount  = $request->max_discount;
+        $coupon->national_code = $request->national_code;
         $coupon->save();
 
         return response()->json([

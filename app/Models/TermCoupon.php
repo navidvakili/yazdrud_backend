@@ -25,6 +25,8 @@ class TermCoupon extends Model
         'used_count',
         'is_active',
         'value',
+        'max_discount',
+        'national_code',
     ];
 
     /**
@@ -40,6 +42,7 @@ class TermCoupon extends Model
         'capacity' => 'integer',
         'used_count' => 'integer',
         'value' => 'integer',
+        'max_discount' => 'integer',
     ];
 
     /**
