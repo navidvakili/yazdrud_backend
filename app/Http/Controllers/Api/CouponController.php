@@ -149,6 +149,7 @@ class CouponController extends Controller
             'course_id'     => 'nullable|exists:courses,id',
             'group_id'      => 'nullable|exists:course_groups,id',
             'capacity'      => 'nullable|integer|min:0',
+            'used_count'    => 'nullable|integer|min:0',
             'start_date'    => 'nullable|string|max:191',
             'finish_date'   => 'nullable|string|max:191',
             'is_active'     => 'nullable|boolean',
@@ -166,6 +167,7 @@ class CouponController extends Controller
         if ($request->has('course_id')) $coupon->course_id = $request->course_id;
         if ($request->has('group_id')) $coupon->group_id = $request->group_id;
         if ($request->has('capacity')) $coupon->capacity = $request->capacity;
+        if ($request->has('used_count')) $coupon->used_count = $request->used_count;
         if ($request->has('start_date')) $coupon->start_date = $request->start_date;
         if ($request->has('finish_date')) $coupon->finish_date = $request->finish_date;
         if ($request->has('is_active')) $coupon->is_active = $request->boolean('is_active');
