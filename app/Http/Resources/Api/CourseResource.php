@@ -59,7 +59,7 @@ class CourseResource extends JsonResource
             'status'          => $status,
             'banner'          => $this->getBannerGradient(),
             'image_url'       => $this->image_url,
-            'section'              => $this->sections ?? ['normal'],
+            'sections'             => $this->sections ?? ['normal'],
             'registration_status'  => $regStatus,
             'group_id'             => $this->group_id,
             'group_title'     => $this->group?->title,

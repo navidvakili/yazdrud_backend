@@ -54,7 +54,7 @@ class CourseController extends Controller
             'id'               => $course->id,
             'group_id'         => $course->group_id,
             'group_title'      => $course->group?->title,
-            'section'          => $course->sections ?? ['normal'],
+            'sections'         => $course->sections ?? ['normal'],
             'title'            => $course->title,
             'amount'           => $course->amount,
             'amount_formatted' => number_format(intval($course->amount)),
@@ -152,9 +152,9 @@ class CourseController extends Controller
             $query->where('group_id', $request->integer('group_id'));
         }
 
-        // Filter by section (main page placement)
-        if ($request->has('section')) {
-            $query->whereJsonContains('sections', $request->section);
+        // Filter by sections (main page placement)
+        if ($request->has('sections')) {
+            $query->whereJsonContains('sections', $request->sections);
         }
 
         // Filter by active status
@@ -222,8 +222,8 @@ class CourseController extends Controller
             'title'        => 'required|string|max:255',
             'amount'       => 'required|numeric|min:0',
             'active'       => 'required|in:0,1,true,false',
-            'section'      => 'nullable|array',
-            'section.*'    => 'in:normal,featured,pre_register,free',
+            'sections'      => 'nullable|array',
+            'sections.*'    => 'in:normal,featured,pre_register,free',
             'image'        => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'description'  => 'nullable|string',
             'syllabus'     => 'nullable|string',
@@ -249,7 +249,7 @@ class CourseController extends Controller
             'amount.min'           => 'مبلغ شهریه نمی‌تواند منفی باشد',
             'active.required'      => 'وضعیت دوره الزامی است',
             'active.in'            => 'وضعیت دوره باید فعال یا غیرفعال باشد',
-            'section.*.in'         => 'دسته‌بندی صفحه اصلی نامعتبر است',
+            'sections.*.in'         => 'دسته‌بندی صفحه اصلی نامعتبر است',
             'image.image'          => 'فایل تصویر باید از نوع تصویر باشد',
             'image.mimes'          => 'فرمت تصویر باید jpeg, png, jpg یا gif باشد',
             'image.max'            => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد',
@@ -279,7 +279,7 @@ class CourseController extends Controller
 
         $course = new Course();
         $course->group_id      = $request->group_id;
-        $course->sections      = $request->input('section', ['normal']);
+        $course->sections      = $request->input('sections', ['normal']);
         $course->title         = $request->title;
         $course->amount        = str_replace(',', '', (string) $request->amount);
         $course->active        = filter_var($request->active, FILTER_VALIDATE_BOOLEAN);
@@ -365,8 +365,8 @@ class CourseController extends Controller
             'title'        => 'sometimes|required|string|max:255',
             'amount'       => 'sometimes|required|numeric|min:0',
             'active'       => 'sometimes|required|in:0,1,true,false',
-            'section'      => 'nullable|array',
-            'section.*'    => 'in:normal,featured,pre_register,free',
+            'sections'      => 'nullable|array',
+            'sections.*'    => 'in:normal,featured,pre_register,free',
             'image'        => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'description'  => 'nullable|string',
             'syllabus'     => 'nullable|string',
@@ -392,7 +392,7 @@ class CourseController extends Controller
             'amount.min'           => 'مبلغ شهریه نمی‌تواند منفی باشد',
             'active.required'      => 'وضعیت دوره الزامی است',
             'active.in'            => 'وضعیت دوره باید فعال یا غیرفعال باشد',
-            'section.*.in'         => 'دسته‌بندی صفحه اصلی نامعتبر است',
+            'sections.*.in'         => 'دسته‌بندی صفحه اصلی نامعتبر است',
             'image.image'          => 'فایل تصویر باید از نوع تصویر باشد',
             'image.mimes'          => 'فرمت تصویر باید jpeg, png, jpg یا gif باشد',
             'image.max'            => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد',
@@ -444,8 +444,8 @@ class CourseController extends Controller
         if ($request->has('instructor_id')) {
             $course->instructor_id = $request->instructor_id;
         }
-        if ($request->has('section')) {
-            $course->sections = $request->input('section', ['normal']);
+        if ($request->has('sections')) {
+            $course->sections = $request->input('sections', ['normal']);
         }
         if ($request->has('group_id')) {
             $course->group_id = $request->group_id;

@@ -11,7 +11,6 @@ class Course extends Model
 
     protected $fillable = [
         'group_id',
-        'section',
         'sections',
         'title',
         'amount',
@@ -41,7 +40,6 @@ class Course extends Model
         'registration_start_date' => 'date',
         'registration_end_date' => 'date',
         'amount' => 'string',
-        'section' => 'string',
         'sections' => 'array',
         'days_of_week' => 'array',
     ];
