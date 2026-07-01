@@ -97,7 +97,7 @@ class Course extends Model
                 return asset('storage/' . $this->image);
             }
         }
-        return asset('images/default-course.svg');
+        return null;
     }
 
     /**
