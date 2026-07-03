@@ -84,9 +84,10 @@ class RegistrationController extends Controller
             'existing_enrollment_code' => 'nullable|string|size:7',
         ]);
 
-        // Check for existing registration
+        // Check for existing successful registration (not failed attempts)
         $existing = Registertut::where('kodmeli', $this->convertPersianToEnglish($validated['kodmeli']))
             ->where('course_id', $validated['course_id'])
+            ->where('status', 'paid')
             ->first();
 
         if ($existing) {
@@ -133,7 +134,7 @@ class RegistrationController extends Controller
                     'ref_id'        => $id,
                     'tracking_code' => $id,
                     'card_number'   => '0',
-                    'status'        => 'PENDING',
+                    'status'        => 'INIT',
                     'ip'            => $request->ip(),
                     'payment_date'  => Carbon::now(),
                 ]);
@@ -169,7 +170,7 @@ class RegistrationController extends Controller
             if ($amount > 0) {
                 try {
                     $callbackUrl = url('api/registrations/verify');
-                    $requestId = uniqid('reg_', true);
+                    $requestId = uniqid();
 
                     $result = $this->iranKish->tokenRequest($amount, $callbackUrl, $requestId);
                     $token = $result['token'];
@@ -183,7 +184,7 @@ class RegistrationController extends Controller
                         'ref_id'        => $token,
                         'tracking_code' => '',
                         'card_number'   => '0',
-                        'status'        => 'PENDING',
+                        'status'        => 'INIT',
                         'description'   => json_encode([
                             'course_id'                => $validated['course_id'],
                             'kodmeli'                  => $this->convertPersianToEnglish($validated['kodmeli']),
@@ -205,7 +206,7 @@ class RegistrationController extends Controller
 
                     return response()->json([
                         'message'        => 'در حال انتقال به درگاه پرداخت...',
-                        'redirect_url'   => $this->iranKish->getGatewayRedirectUrl($token),
+                        'redirect_url'   => 'https://ikc.shaparak.ir/iuiv3/IPG/Index',
                         'token'          => $token,
                         'transaction_id' => $gateway->id,
                     ], 200);
@@ -320,9 +321,12 @@ class RegistrationController extends Controller
             // Check if payment was successful from callback
             if ($responseCode !== '00') {
                 $gatewayTransaction->update(['status' => 'FAILED']);
+                $regData = $gatewayTransaction->description ? json_decode($gatewayTransaction->description, true) : null;
+                $courseId = $regData['course_id'] ?? null;
                 $params = http_build_query([
-                    'status'  => 'failed',
-                    'message' => 'پرداخت ناموفق بود.',
+                    'status'    => 'failed',
+                    'message'   => 'پرداخت ناموفق بود.',
+                    'course_id' => $courseId,
                 ]);
                 return redirect()->away($redirectPath . '?' . $params);
             }
@@ -352,9 +356,12 @@ class RegistrationController extends Controller
                 );
             } catch (\Exception $e) {
                 $gatewayTransaction->update(['status' => 'FAILED']);
+                $regData = $gatewayTransaction->description ? json_decode($gatewayTransaction->description, true) : null;
+                $courseId = $regData['course_id'] ?? null;
                 $params = http_build_query([
-                    'status'  => 'failed',
-                    'message' => 'خطا در تایید تراکنش: ' . $e->getMessage(),
+                    'status'    => 'failed',
+                    'message'   => 'خطا در تایید تراکنش: ' . $e->getMessage(),
+                    'course_id' => $courseId,
                 ]);
                 return redirect()->away($redirectPath . '?' . $params);
             }
