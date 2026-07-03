@@ -288,44 +288,17 @@ class CourseController extends Controller
         $course->instructor_id = $request->instructor_id;
 
         if ($request->start_date) {
-            try {
-                $course->start_date = Verta::parse(str_replace('/', '-', $request->start_date))->formatGregorian('Y-m-d');
-            } catch (\Exception $e) {
-                return response()->json([
-                    'message' => 'فرمت تاریخ شروع نامعتبر است',
-                    'errors'  => ['start_date' => ['فرمت تاریخ نامعتبر است']],
-                ], 422);
-            }
+            // Store Shamsi date string directly — do NOT convert to Gregorian.
+            $course->start_date = str_replace('/', '-', $request->start_date);
         }
         if ($request->end_date) {
-            try {
-                $course->end_date = Verta::parse(str_replace('/', '-', $request->end_date))->formatGregorian('Y-m-d');
-            } catch (\Exception $e) {
-                return response()->json([
-                    'message' => 'فرمت تاریخ پایان نامعتبر است',
-                    'errors'  => ['end_date' => ['فرمت تاریخ نامعتبر است']],
-                ], 422);
-            }
+            $course->end_date = str_replace('/', '-', $request->end_date);
         }
         if ($request->registration_start_date) {
-            try {
-                $course->registration_start_date = Verta::parse(str_replace('/', '-', $request->registration_start_date))->formatGregorian('Y-m-d');
-            } catch (\Exception $e) {
-                return response()->json([
-                    'message' => 'فرمت تاریخ شروع ثبت‌نام نامعتبر است',
-                    'errors'  => ['registration_start_date' => ['فرمت تاریخ نامعتبر است']],
-                ], 422);
-            }
+            $course->registration_start_date = str_replace('/', '-', $request->registration_start_date);
         }
         if ($request->registration_end_date) {
-            try {
-                $course->registration_end_date = Verta::parse(str_replace('/', '-', $request->registration_end_date))->formatGregorian('Y-m-d');
-            } catch (\Exception $e) {
-                return response()->json([
-                    'message' => 'فرمت تاریخ پایان ثبت‌نام نامعتبر است',
-                    'errors'  => ['registration_end_date' => ['فرمت تاریخ نامعتبر است']],
-                ], 422);
-            }
+            $course->registration_end_date = str_replace('/', '-', $request->registration_end_date);
         }
 
         $course->capacity         = $request->capacity ?? 0;
@@ -448,56 +421,29 @@ class CourseController extends Controller
         }
         if ($request->has('start_date')) {
             if ($request->start_date) {
-                try {
-                    $course->start_date = Verta::parse(str_replace('/', '-', $request->start_date))->formatGregorian('Y-m-d');
-                } catch (\Exception $e) {
-                    return response()->json([
-                        'message' => 'فرمت تاریخ شروع نامعتبر است',
-                        'errors'  => ['start_date' => ['فرمت تاریخ نامعتبر است']],
-                    ], 422);
-                }
+                // Store Shamsi date string directly — do NOT convert to Gregorian.
+                $course->start_date = str_replace('/', '-', $request->start_date);
             } else {
                 $course->start_date = null;
             }
         }
         if ($request->has('end_date')) {
             if ($request->end_date) {
-                try {
-                    $course->end_date = Verta::parse(str_replace('/', '-', $request->end_date))->formatGregorian('Y-m-d');
-                } catch (\Exception $e) {
-                    return response()->json([
-                        'message' => 'فرمت تاریخ پایان نامعتبر است',
-                        'errors'  => ['end_date' => ['فرمت تاریخ نامعتبر است']],
-                    ], 422);
-                }
+                $course->end_date = str_replace('/', '-', $request->end_date);
             } else {
                 $course->end_date = null;
             }
         }
         if ($request->has('registration_start_date')) {
             if ($request->registration_start_date) {
-                try {
-                    $course->registration_start_date = Verta::parse(str_replace('/', '-', $request->registration_start_date))->formatGregorian('Y-m-d');
-                } catch (\Exception $e) {
-                    return response()->json([
-                        'message' => 'فرمت تاریخ شروع ثبت‌نام نامعتبر است',
-                        'errors'  => ['registration_start_date' => ['فرمت تاریخ نامعتبر است']],
-                    ], 422);
-                }
+                $course->registration_start_date = str_replace('/', '-', $request->registration_start_date);
             } else {
                 $course->registration_start_date = null;
             }
         }
         if ($request->has('registration_end_date')) {
             if ($request->registration_end_date) {
-                try {
-                    $course->registration_end_date = Verta::parse(str_replace('/', '-', $request->registration_end_date))->formatGregorian('Y-m-d');
-                } catch (\Exception $e) {
-                    return response()->json([
-                        'message' => 'فرمت تاریخ پایان ثبت‌نام نامعتبر است',
-                        'errors'  => ['registration_end_date' => ['فرمت تاریخ نامعتبر است']],
-                    ], 422);
-                }
+                $course->registration_end_date = str_replace('/', '-', $request->registration_end_date);
             } else {
                 $course->registration_end_date = null;
             }

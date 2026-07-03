@@ -297,20 +297,22 @@ class CertificateController extends Controller
             'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
         ];
 
-        // Convert course start_date to Jalali month/year if available
+        // Convert course start_date to Jalali month/year
         $courseMonthYear = '—';
         if ($course && $course->start_date) {
             try {
-                $year = (int) $course->start_date->format('Y');
-                $month = (int) $course->start_date->format('m');
-                // Simple Gregorian to Jalali year conversion (approximate)
-                $jalaliYear = $year;
-                $monthIndex = $month - 1;
-                if ($monthIndex >= 0 && $monthIndex < 12) {
-                    $courseMonthYear = $jalaliMonths[$monthIndex] . ' ' . $jalaliYear;
+                // start_date is stored as a Shamsi string (e.g. "1405-01-01")
+                $parts = explode('-', $course->start_date);
+                if (count($parts) >= 2) {
+                    $year = (int) $parts[0];
+                    $month = (int) $parts[1];
+                    $monthIndex = $month - 1;
+                    if ($monthIndex >= 0 && $monthIndex < 12) {
+                        $courseMonthYear = $jalaliMonths[$monthIndex] . ' ' . $year;
+                    }
                 }
             } catch (\Exception $e) {
-                $courseMonthYear = $course->start_date->format('Y/m/d');
+                $courseMonthYear = str_replace('-', '/', $course->start_date);
             }
         }
 
@@ -330,8 +332,9 @@ class CertificateController extends Controller
             'course_title'       => $course->title ?? '—',
             'course_duration'    => $course->duration ?? '—',
             'instructor'         => $course->instructor ?? '—',
-            'start_date'         => $course->start_date?->format('Y/m/d') ?? '—',
-            'end_date'           => $course->end_date?->format('Y/m/d') ?? '—',
+            // Dates are stored as Shamsi strings (e.g. "1405-01-01")
+            'start_date'         => $course->start_date ? str_replace('-', '/', $course->start_date) : '—',
+            'end_date'           => $course->end_date ? str_replace('-', '/', $course->end_date) : '—',
             'course_month_year'  => $courseMonthYear,
             'issued_date'        => $jy . '/' . str_pad($gm, 2, '0', STR_PAD_LEFT) . '/' . str_pad($gd, 2, '0', STR_PAD_LEFT),
             'issued_date_words'  => $issuedDateWords,

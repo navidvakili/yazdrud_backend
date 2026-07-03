@@ -19,8 +19,9 @@ class PublicCourseController extends Controller
      */
     private function applyDateFilters($query): void
     {
-        // Dates in DB are stored as Shamsi (e.g. 1405-04-27) in DATE columns,
-        // so we must compare using Shamsi today to avoid Gregorian-vs-Shamsi mismatch.
+        // All dates in DB MUST be stored as Shamsi (e.g. 1405-04-27).
+        // If any course shows Gregorian dates (2026-...), it means the code
+        // that saved it did not convert the date properly.
         $today = Verta::today()->format('Y-m-d');
 
         // Course lifecycle + registration window

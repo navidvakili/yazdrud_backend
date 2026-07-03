@@ -35,10 +35,8 @@ class Course extends Model
 
     protected $casts = [
         'active' => 'boolean',
-        'start_date' => 'date',
-        'end_date' => 'date',
-        'registration_start_date' => 'date',
-        'registration_end_date' => 'date',
+        // Date fields store Shamsi date strings (e.g. 1405-04-13).
+        // Do NOT cast to 'date' — that would force Carbon (Gregorian) interpretation.
         'amount' => 'string',
         'sections' => 'array',
         'days_of_week' => 'array',
