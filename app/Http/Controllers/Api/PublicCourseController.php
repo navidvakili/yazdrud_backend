@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\CourseResource;
 use App\Models\Course;
 use Carbon\Carbon;
+use Hekmatinasser\Verta\Verta;
 use Illuminate\Http\Request;
 
 class PublicCourseController extends Controller
@@ -13,22 +14,39 @@ class PublicCourseController extends Controller
     /**
      * Apply date-based visibility rules:
      * - Exclude courses that have fully concluded (start_date AND end_date both in the past)
+     *   UNLESS registration is still open (no registration_end_date set or it's in the future)
      * - Exclude courses where registration hasn't opened yet (registration_start_date > today)
      */
     private function applyDateFilters($query): void
     {
-        $today = Carbon::today();
+        // Dates in DB are stored as Shamsi (e.g. 1405-04-27) in DATE columns,
+        // so we must compare using Shamsi today to avoid Gregorian-vs-Shamsi mismatch.
+        $today = Verta::today()->format('Y-m-d');
 
-        // Only hide courses that have fully concluded (both start and end are past)
+        // Course lifecycle + registration window
         $query->where(function ($q) use ($today) {
-            $q->whereNull('start_date')       // No start date → always show
-              ->orWhere('start_date', '>', $today)  // Future start → show
+            // No start date → always show
+            $q->whereNull('start_date')
+              // Future start → show
+              ->orWhere('start_date', '>', $today)
+              // Started
               ->orWhere(function ($q2) use ($today) {
-                  // Started but hasn't ended yet → still show
                   $q2->where('start_date', '<=', $today)
                      ->where(function ($q3) use ($today) {
-                         $q3->whereNull('end_date')          // No end date → still active
-                            ->orWhere('end_date', '>=', $today);  // End date is today or future → still active
+                         // No end date → ongoing
+                         $q3->whereNull('end_date')
+                            // End date is today/future → ongoing
+                            ->orWhere('end_date', '>=', $today)
+                            // Course has ended but registration still open (no deadline set)
+                            ->orWhere(function ($q4) use ($today) {
+                                $q4->where('end_date', '<', $today)
+                                   ->whereNull('registration_end_date');
+                            })
+                            // Course has ended but registration deadline is in the future
+                            ->orWhere(function ($q4) use ($today) {
+                                $q4->where('end_date', '<', $today)
+                                   ->where('registration_end_date', '>=', $today);
+                            });
                      });
               });
         });
@@ -82,7 +100,7 @@ class PublicCourseController extends Controller
         }
         $query->orderBy($sortField, $sortDir);
 
-        $perPage = min((int) $request->get('per_page', 12), 50);
+        $perPage = min((int) $request->get('per_page', 12), 500);
         $courses = $query->paginate($perPage);
 
         return CourseResource::collection($courses);
