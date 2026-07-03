@@ -10,6 +10,7 @@ use App\Library\Crypt;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Mccarlosen\LaravelMpdf\Facades\LaravelMpdf;
@@ -274,7 +275,15 @@ class CertificateController extends Controller
 
             DB::commit();
 
-            return $pdf->stream('certificate_' . $certificate->certificate_number . '.pdf');
+            $pdfContent = $pdf->output();
+
+            return response($pdfContent, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="certificate_' . $certificate->certificate_number . '.pdf"',
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+                'Access-Control-Allow-Headers' => '*',
+            ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
