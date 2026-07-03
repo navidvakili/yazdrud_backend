@@ -55,6 +55,9 @@ Route::get('/public/stats', [\App\Http\Controllers\Api\PublicCourseController::c
 // ==================== Public Course Groups ====================
 Route::get('/public/course-groups', [\App\Http\Controllers\Api\CourseGroupController::class, 'index']);
 
+// ==================== Public Learner Club (باشگاه فراگیران) ====================
+Route::get('/public/learner-club/lookup', [\App\Http\Controllers\Api\LearnerClubController::class, 'lookup']);
+
 // ==================== Public Registrations API (for frontend website) ====================
 // NOTE: lookup MUST come before {id} to avoid route conflict
 Route::get('/registrations', [\App\Http\Controllers\Api\RegistrationController::class, 'index']);
