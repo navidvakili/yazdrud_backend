@@ -151,11 +151,10 @@ class RegistrationController extends Controller
                 DB::commit();
 
                 // Send SMS outside transaction so API failure doesn't roll back registration
-                $this->smsService->sendEnrollmentSms(
+                $this->smsService->sendByPattern(
+                    'nzn5zwuedd0kaye',
+                    ['faragir' => $enrollmentCode],
                     $register->mobile,
-                    $enrollmentCode,
-                    $register->fullname,
-                    $course->title,
                 );
 
                 return response()->json([
@@ -261,11 +260,10 @@ class RegistrationController extends Controller
             DB::commit();
 
             // Send SMS outside transaction so API failure doesn't roll back registration
-            $this->smsService->sendEnrollmentSms(
+            $this->smsService->sendByPattern(
+                'nzn5zwuedd0kaye',
+                ['faragir' => $enrollmentCode],
                 $register->mobile,
-                $enrollmentCode,
-                $register->fullname,
-                $course->title,
             );
 
             return response()->json([
@@ -419,12 +417,10 @@ class RegistrationController extends Controller
                 DB::commit();
 
                 // Send SMS outside transaction so API failure doesn't roll back registration
-                $course = Course::find($regData['course_id']);
-                $this->smsService->sendEnrollmentSms(
+                $this->smsService->sendByPattern(
+                    'nzn5zwuedd0kaye',
+                    ['faragir' => $enrollmentCode],
                     $register->mobile,
-                    $enrollmentCode,
-                    $register->fullname,
-                    $course?->title ?? 'دوره آموزشی',
                 );
             } catch (\Exception $e) {
                 DB::rollBack();
