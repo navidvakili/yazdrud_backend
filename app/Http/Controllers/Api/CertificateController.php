@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\SmsService;
 use Mccarlosen\LaravelMpdf\Facades\LaravelMpdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -115,12 +117,30 @@ class CertificateController extends Controller
     public function approve($registerId): JsonResponse
     {
         $registerId = Crypt::encryptor('decrypt', $registerId);
-        $registration = Registertut::findOrFail($registerId);
+        $registration = Registertut::with('course')->findOrFail($registerId);
 
         $registration->certificate_approved     = true;
         $registration->certificate_approved_at = Carbon::now();
         $registration->certificate_approved_by = Auth::user()->username ?? Auth::id();
         $registration->save();
+
+        // Send SMS notification to learner
+        try {
+            $smsService = app(SmsService::class);
+            $smsService->sendByPattern(
+                '0wswa3ctz2zxn2z',
+                [
+                    'term'    => $registration->course?->title ?? 'دوره',
+                    'faragir' => $registration->enrollment_code ?? (string) $registration->id,
+                ],
+                $registration->mobile
+            );
+        } catch (\Exception $e) {
+            Log::error('ارسال پیامک تایید گواهی ناموفق بود.', [
+                'register_id' => $registration->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'ثبت‌نام برای صدور گواهی تایید شد.',
@@ -162,7 +182,8 @@ class CertificateController extends Controller
             return response()->json(['message' => 'لطفاً یک دوره را انتخاب کنید.'], 422);
         }
 
-        $count = Registertut::where('course_id', $courseId)
+        $registrations = Registertut::with('course')
+            ->where('course_id', $courseId)
             ->where(function ($q) {
                 $q->where('verified_receipt', true)
                   ->orWhere(function ($q2) {
@@ -174,11 +195,34 @@ class CertificateController extends Controller
             })
             ->whereDoesntHave('certificate')
             ->where('certificate_approved', false)
-            ->update([
-                'certificate_approved'     => true,
-                'certificate_approved_at' => Carbon::now(),
-                'certificate_approved_by' => Auth::user()->username ?? Auth::id(),
-            ]);
+            ->get();
+
+        $count = 0;
+        foreach ($registrations as $registration) {
+            $registration->certificate_approved     = true;
+            $registration->certificate_approved_at = Carbon::now();
+            $registration->certificate_approved_by = Auth::user()->username ?? Auth::id();
+            $registration->save();
+            $count++;
+
+            // Send SMS notification to each learner
+            try {
+                $smsService = app(SmsService::class);
+                $smsService->sendByPattern(
+                    '0wswa3ctz2zxn2z',
+                    [
+                        'term'    => $registration->course?->title ?? 'دوره',
+                        'faragir' => $registration->enrollment_code ?? (string) $registration->id,
+                    ],
+                    $registration->mobile
+                );
+            } catch (\Exception $e) {
+                Log::error('ارسال پیامک تایید گواهی ناموفق بود.', [
+                    'register_id' => $registration->id,
+                    'error'       => $e->getMessage(),
+                ]);
+            }
+        }
 
         return response()->json([
             'message' => "تعداد {$count} ثبت‌نام برای صدور گواهی تایید شدند.",
