@@ -107,6 +107,14 @@ class RegistrationController extends Controller
         DB::beginTransaction();
 
         try {
+            // Re-fetch course with pessimistic lock to prevent race conditions
+            $course = Course::lockForUpdate()->findOrFail($validated['course_id']);
+            if (!$course->isAvailable()) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'ظرفیت این دوره تکمیل شده است.',
+                ], 422);
+            }
             // ========== BANK RECEIPT payment ==========
             if ($validated['payment_method'] === 'bank') {
                 $register = Registertut::create([
@@ -379,6 +387,17 @@ class RegistrationController extends Controller
             DB::beginTransaction();
 
             try {
+                // Re-check course capacity inside transaction with pessimistic lock
+                $course = Course::lockForUpdate()->find($regData['course_id']);
+                if (!$course || !$course->isAvailable()) {
+                    DB::rollBack();
+                    $params = http_build_query([
+                        'status'  => 'failed',
+                        'message' => 'ظرفیت این دوره تکمیل شده است.',
+                    ]);
+                    return redirect()->away($redirectPath . '?' . $params);
+                }
+
                 // Create the Registertut record NOW, after successful payment
                 $register = Registertut::create([
                     'kodmeli'        => $regData['kodmeli'],

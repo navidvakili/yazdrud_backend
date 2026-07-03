@@ -100,10 +100,25 @@ class Course extends Model
 
     /**
      * Check if the course is available for registration.
+     *
+     * Counts actual non-refunded registrations from the database
+     * rather than relying solely on the cached registered_count column.
      */
     public function isAvailable(): bool
     {
-        return $this->active && ($this->capacity == 0 || $this->registered_count < $this->capacity);
+        if (!$this->active) {
+            return false;
+        }
+
+        if ($this->capacity == 0) {
+            return true;
+        }
+
+        $actualRegistrations = $this->registrations()
+            ->where('refunded', false)
+            ->count();
+
+        return $actualRegistrations < $this->capacity;
     }
 
     /**
