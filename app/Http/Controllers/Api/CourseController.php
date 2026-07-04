@@ -9,6 +9,7 @@ use App\Models\Registertut;
 use Hekmatinasser\Verta\Verta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -649,6 +650,44 @@ class CourseController extends Controller
             }
         }
 
+        // Clone the query for stats (before pagination, so stats reflect full filtered set)
+        $statsIds = (clone $query)->select('registertuts.id')->pluck('id');
+
+        // Compute stats from the filtered IDs
+        $totalConfirmed = Registertut::whereIn('id', $statsIds)
+            ->where(function ($q) {
+                $q->where('verified_receipt', true)
+                  ->orWhere(function ($q2) {
+                      $q2->where('payment_method', 'online')
+                         ->whereHas('payment.transaction', function ($q3) {
+                             $q3->where('status', 'SUCCEED');
+                         });
+                  });
+            })->count();
+
+        $onlinePaid = Registertut::whereIn('id', $statsIds)
+            ->where('payment_method', 'online')
+            ->whereHas('payment.transaction', function ($q) {
+                $q->where('status', 'SUCCEED');
+            })->count();
+
+        $bankVerified = Registertut::whereIn('id', $statsIds)
+            ->where('payment_method', 'bank')
+            ->where('verified_receipt', true)
+            ->count();
+
+        // Total amount: sum of transaction.price for online, course.amount for bank
+        $totalAmount = DB::table('registertuts')
+            ->whereIn('registertuts.id', $statsIds)
+            ->leftJoin('registertuts_payments', 'registertuts.id', '=', 'registertuts_payments.register_id')
+            ->leftJoin('gateway_transactions', 'registertuts_payments.transaction_id', '=', 'gateway_transactions.id')
+            ->leftJoin('courses', 'registertuts.course_id', '=', 'courses.id')
+            ->selectRaw('SUM(CASE
+                WHEN registertuts.payment_method = "online" THEN COALESCE(gateway_transactions.price, 0)
+                ELSE COALESCE(courses.amount, 0)
+            END) as total_amount')
+            ->value('total_amount');
+
         $registrations = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 20));
 
         return response()->json([
@@ -660,6 +699,12 @@ class CourseController extends Controller
                 'last_page'    => $registrations->lastPage(),
                 'per_page'     => $registrations->perPage(),
                 'total'        => $registrations->total(),
+            ],
+            'stats' => [
+                'total_confirmed' => $totalConfirmed,
+                'online_paid'     => $onlinePaid,
+                'bank_verified'   => $bankVerified,
+                'total_amount'    => (int) ($totalAmount ?? 0),
             ],
         ]);
     }
