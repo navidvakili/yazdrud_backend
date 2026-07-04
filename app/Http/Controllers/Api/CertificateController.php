@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\SmsService;
+use Hekmatinasser\Verta\Verta;
 use Mccarlosen\LaravelMpdf\Facades\LaravelMpdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -398,7 +399,8 @@ class CertificateController extends Controller
         $jy = $gy - 621;
         $issuedDateWords = $gd . ' ' . $jalaliMonths[$gm - 1] . ' ' . $jy;
 
-        $verificationUrl = route('certificates.verify', Crypt::encryptor('encrypt', $certificate->certificate_number));
+        $encryptedForQr = Crypt::encryptor('encrypt', $certificate->certificate_number);
+        $verificationUrl = config('app.terms_frontend_url') . '/verify-certificate/' . urlencode($encryptedForQr);
 
         return [
             'certificate_number' => $certificate->certificate_number,
@@ -543,12 +545,19 @@ class CertificateController extends Controller
         $registration = $certificate->registration;
         $course = $registration->course ?? null;
 
+        // Convert issued_at to Jalali date
+        $issuedJalali = null;
+        if ($certificate->issued_at) {
+            $v = new Verta($certificate->issued_at);
+            $issuedJalali = $v->format('Y/m/d');
+        }
+
         return response()->json([
             'valid'       => true,
             'message'     => 'این گواهی معتبر می‌باشد.',
             'certificate' => [
                 'certificate_number' => $certificate->certificate_number,
-                'issued_at'          => $certificate->issued_at?->format('Y/m/d'),
+                'issued_at'          => $issuedJalali,
                 'fullname'           => $registration->fullname,
                 'national_code'      => $registration->kodmeli,
                 'course_title'       => $course->title ?? null,
