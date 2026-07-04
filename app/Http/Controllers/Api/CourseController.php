@@ -583,6 +583,9 @@ class CourseController extends Controller
               });
         });
 
+        // Exclude refunded registrations (must match CourseStatisticsController logic)
+        $query->where('registertuts.refunded', false);
+
         // Filter by course
         if ($request->filled('course_id')) {
             $query->where('course_id', $request->course_id);
@@ -723,6 +726,9 @@ class CourseController extends Controller
                   $q2->where('status', 'SUCCEED');
               });
         });
+
+        // Exclude refunded registrations (must match allRegistrations logic)
+        $query->where('registertuts.refunded', false);
 
         if ($request->filled('course_id')) {
             $query->where('course_id', $request->course_id);
