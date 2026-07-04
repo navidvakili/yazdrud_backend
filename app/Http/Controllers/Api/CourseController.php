@@ -117,6 +117,7 @@ class CourseController extends Controller
             'status_text'      => $reg->actual_status_text,
             'amount'           => $amount,
             'amount_formatted' => number_format($amount),
+            'enrollment_code'  => $reg->enrollment_code,
             'verified_receipt' => (bool) $reg->verified_receipt,
             'rejected_receipt' => (bool) $reg->rejected_receipt,
             'rejection_reason' => $reg->rejection_reason,
