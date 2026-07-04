@@ -600,6 +600,14 @@ class CourseController extends Controller
             });
         }
 
+        // Filter by year (Jalali year — convert to Gregorian date range)
+        if ($request->filled('year')) {
+            $jalaliYear = (int) $request->year;
+            $firstDayOfYear = Verta::parse("{$jalaliYear}/1/1")->toCarbon();
+            $lastDayOfYear = Verta::parse("{$jalaliYear}/12/29")->toCarbon()->endOfDay();
+            $query->whereBetween('created_at', [$firstDayOfYear, $lastDayOfYear]);
+        }
+
         // Filter by payment method (online / bank)
         if ($request->filled('payment_method')) {
             $query->where('payment_method', $request->payment_method);
@@ -653,6 +661,131 @@ class CourseController extends Controller
                 'per_page'     => $registrations->perPage(),
                 'total'        => $registrations->total(),
             ],
+        ]);
+    }
+
+    /**
+     * Export registrations as CSV based on current filters.
+     */
+    public function exportRegistrations(Request $request): \Illuminate\Http\Response
+    {
+        // Build same query as allRegistrations but without pagination
+        $query = Registertut::with(['course', 'payment.transaction']);
+
+        $query->where(function ($q) {
+            $q->where('payment_method', '!=', 'online')
+              ->orWhereHas('payment.transaction', function ($q2) {
+                  $q2->where('status', 'SUCCEED');
+              });
+        });
+
+        if ($request->filled('course_id')) {
+            $query->where('course_id', $request->course_id);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $search = str_replace(['ي', 'ك'], ['ی', 'ک'], $search);
+            $query->where(function ($q) use ($search) {
+                $q->where('fullname', 'like', "%{$search}%")
+                  ->orWhere('kodmeli', 'like', "%{$search}%")
+                  ->orWhere('mobile', 'like', "%{$search}%")
+                  ->orWhere('id_edu', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('year')) {
+            $jalaliYear = (int) $request->year;
+            $firstDayOfYear = Verta::parse("{$jalaliYear}/1/1")->toCarbon();
+            $lastDayOfYear = Verta::parse("{$jalaliYear}/12/29")->toCarbon()->endOfDay();
+            $query->whereBetween('created_at', [$firstDayOfYear, $lastDayOfYear]);
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('status')) {
+            switch ($request->status) {
+                case 'verified':
+                    $query->where(function ($q) {
+                        $q->where('verified_receipt', true)
+                          ->orWhere(function ($q2) {
+                              $q2->where('payment_method', 'online')
+                                 ->whereHas('payment.transaction', function ($q3) {
+                                     $q3->where('status', 'SUCCEED');
+                                 });
+                          });
+                    });
+                    break;
+                case 'pending':
+                    $query->where('payment_method', 'bank')
+                        ->where('verified_receipt', false)
+                        ->where('rejected_receipt', false);
+                    break;
+                case 'approved':
+                    $query->where('verified_receipt', true);
+                    break;
+                case 'rejected':
+                    $query->where('rejected_receipt', true);
+                    break;
+                case 'paid':
+                    $query->where('payment_method', 'online')
+                        ->whereHas('payment.transaction', function ($q) {
+                            $q->where('status', 'SUCCEED');
+                        });
+                    break;
+            }
+        }
+
+        $registrations = $query->orderBy('created_at', 'asc')->get();
+
+        // Build CSV with UTF-8 BOM for Persian text
+        $csv = "\xEF\xBB\xBF"; // BOM
+        $csv .= "ردیف,کد فراگیر,کد ملی,نام,شماره دانشجویی,موبایل,ایمیل,نوع کاربر,دوره آموزشی,مبلغ,نوع پرداخت,شماره پیگیری,تاریخ ثبت نام,وضعیت\n";
+
+        $i = 1;
+        foreach ($registrations as $reg) {
+            $amount = $reg->payment_method === 'online'
+                ? intval($reg->payment?->transaction?->price ?? 0)
+                : intval($reg->course?->amount ?? 0);
+
+            $createdAt = $this->toJalali($reg->created_at, 'Y/m/d H:i') ?? '';
+            $trackingCode = $reg->payment?->transaction?->tracking_code ?? '';
+
+            $row = [
+                $i,
+                $reg->enrollment_code ?? '',
+                $reg->kodmeli,
+                $reg->fullname,
+                $reg->id_edu ?? '',
+                $reg->mobile,
+                $reg->email ?? '',
+                $reg->type_text ?? '',
+                $reg->course?->title ?? '',
+                number_format($amount),
+                $reg->payment_method === 'online' ? 'پرداخت آنلاین' : 'فیش بانکی',
+                $trackingCode,
+                $createdAt,
+                $reg->actual_status_text,
+            ];
+
+            // Properly escape CSV fields
+            $escaped = array_map(function ($field) {
+                $field = str_replace('"', '""', $field);
+                if (strpos($field, ',') !== false || strpos($field, '"') !== false || strpos($field, "\n") !== false) {
+                    return '"' . $field . '"';
+                }
+                return $field;
+            }, $row);
+
+            $csv .= implode(',', $escaped) . "\n";
+            $i++;
+        }
+
+        return response($csv, 200, [
+            'Content-Type'        => 'text/csv; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="registrations-report.csv"',
         ]);
     }
 
