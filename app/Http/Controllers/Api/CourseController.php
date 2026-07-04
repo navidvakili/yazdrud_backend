@@ -680,8 +680,13 @@ class CourseController extends Controller
             ->count();
 
         // Total amount: sum of transaction.price for online, course.amount for bank
+        // Only count confirmed payments (verified bank receipts + SUCCEED online)
         $totalAmount = DB::table('registertuts')
             ->whereIn('registertuts.id', $statsIds)
+            ->where(function ($q) {
+                $q->where('registertuts.verified_receipt', true)
+                  ->orWhere('gateway_transactions.status', 'SUCCEED');
+            })
             ->leftJoin('registertuts_payments', 'registertuts.id', '=', 'registertuts_payments.register_id')
             ->leftJoin('gateway_transactions', 'registertuts_payments.transaction_id', '=', 'gateway_transactions.id')
             ->leftJoin('courses', 'registertuts.course_id', '=', 'courses.id')
