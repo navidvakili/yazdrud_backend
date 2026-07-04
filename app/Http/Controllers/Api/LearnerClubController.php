@@ -36,6 +36,7 @@ class LearnerClubController extends Controller
         // Search only by enrollment code (کد فراگیر)
         $registrations = Registertut::with(['course', 'certificate'])
             ->where('enrollment_code', $code)
+            ->where('refunded', false)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -60,7 +61,7 @@ class LearnerClubController extends Controller
 
         $courses = $registrations->map(function ($reg) {
             try {
-                $hasCertificate = $reg->certificate()->exists() && $reg->certificate_approved;
+                $hasCertificate = (bool) $reg->certificate_approved;
 
                 return [
                     'registerId'          => $reg->id,
