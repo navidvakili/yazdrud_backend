@@ -152,8 +152,8 @@ class RegistrationController extends Controller
                     'register_id'    => $register->id,
                 ]);
 
-                // Generate enrollment code inside transaction (reuse existing if provided)
-                $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->enrollmentCodeGenerator->generate();
+                // Generate enrollment code inside transaction (reuse existing if provided, or same kodmeli)
+                $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->resolveEnrollmentCode($validated['kodmeli']);
                 $register->update(['enrollment_code' => $enrollmentCode]);
 
                 DB::commit();
@@ -261,8 +261,8 @@ class RegistrationController extends Controller
                 'register_id'    => $register->id,
             ]);
 
-            // Generate enrollment code inside transaction (reuse existing if provided)
-            $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->enrollmentCodeGenerator->generate();
+            // Generate enrollment code inside transaction (reuse existing if provided, or same kodmeli)
+            $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->resolveEnrollmentCode($validated['kodmeli']);
             $register->update(['enrollment_code' => $enrollmentCode]);
 
             DB::commit();
@@ -429,8 +429,8 @@ class RegistrationController extends Controller
                     'card_number'   => $request->input('maskedPan', ''),
                 ]);
 
-                // Generate enrollment code inside transaction (reuse existing if provided)
-                $enrollmentCode = $regData['existing_enrollment_code'] ?? $this->enrollmentCodeGenerator->generate();
+                // Generate enrollment code inside transaction (reuse existing if provided, or same kodmeli)
+                $enrollmentCode = $regData['existing_enrollment_code'] ?? $this->resolveEnrollmentCode($regData['kodmeli']);
                 $register->update(['enrollment_code' => $enrollmentCode]);
 
                 DB::commit();
@@ -582,5 +582,24 @@ class RegistrationController extends Controller
         $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
         $english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
         return str_replace($persian, $english, $string);
+    }
+
+    /**
+     * Resolve enrollment code for a given national code.
+     * If the learner already has an enrollment code from a previous registration, reuse it.
+     * Otherwise, generate a new unique 7-digit code.
+     */
+    private function resolveEnrollmentCode(string $kodmeli): string
+    {
+        $existing = Registertut::where('kodmeli', $kodmeli)
+            ->whereNotNull('enrollment_code')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($existing) {
+            return $existing->enrollment_code;
+        }
+
+        return $this->enrollmentCodeGenerator->generate();
     }
 }
