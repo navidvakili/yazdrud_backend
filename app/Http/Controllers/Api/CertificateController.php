@@ -119,6 +119,17 @@ class CertificateController extends Controller
         $registerId = Crypt::encryptor('decrypt', $registerId);
         $registration = Registertut::with('course')->findOrFail($registerId);
 
+        // If learner has no enrollment code, generate one (reuse existing code for same kodmeli)
+        if (empty($registration->enrollment_code)) {
+            $existing = Registertut::where('kodmeli', $registration->kodmeli)
+                ->whereNotNull('enrollment_code')
+                ->orderBy('created_at', 'desc')
+                ->first();
+            $registration->enrollment_code = $existing
+                ? $existing->enrollment_code
+                : app(\App\Services\EnrollmentCodeGenerator::class)->generate();
+        }
+
         $registration->certificate_approved     = true;
         $registration->certificate_approved_at = Carbon::now();
         $registration->certificate_approved_by = Auth::user()->username ?? Auth::id();
@@ -199,6 +210,17 @@ class CertificateController extends Controller
 
         $count = 0;
         foreach ($registrations as $registration) {
+            // If learner has no enrollment code, generate one (reuse existing code for same kodmeli)
+            if (empty($registration->enrollment_code)) {
+                $existing = Registertut::where('kodmeli', $registration->kodmeli)
+                    ->whereNotNull('enrollment_code')
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                $registration->enrollment_code = $existing
+                    ? $existing->enrollment_code
+                    : app(\App\Services\EnrollmentCodeGenerator::class)->generate();
+            }
+
             $registration->certificate_approved     = true;
             $registration->certificate_approved_at = Carbon::now();
             $registration->certificate_approved_by = Auth::user()->username ?? Auth::id();
