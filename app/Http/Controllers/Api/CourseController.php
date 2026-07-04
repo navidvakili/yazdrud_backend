@@ -116,6 +116,8 @@ class CourseController extends Controller
             'bank_receipt_filename' => $reg->bank_receipt,
             'status'           => $reg->actual_status,
             'status_text'      => $reg->actual_status_text,
+            'refunded'         => (bool) $reg->refunded,
+            'refunded_at'      => $this->toJalali($reg->refunded_at, 'Y/m/d H:i'),
             'amount'           => $amount,
             'amount_formatted' => number_format($amount),
             'enrollment_code'  => $reg->enrollment_code,
@@ -583,8 +585,15 @@ class CourseController extends Controller
               });
         });
 
-        // Exclude refunded registrations (must match CourseStatisticsController logic)
-        $query->where('registertuts.refunded', false);
+        // Filter by refunded status (show/hide/only — default: show all)
+        if ($request->filled('refunded')) {
+            if ($request->refunded === 'hide') {
+                $query->where('registertuts.refunded', false);
+            } elseif ($request->refunded === 'only') {
+                $query->where('registertuts.refunded', true);
+            }
+            // 'show' (or anything else) → no filter, show both
+        }
 
         // Filter by course
         if ($request->filled('course_id')) {
@@ -654,7 +663,8 @@ class CourseController extends Controller
         }
 
         // Clone the query for stats (before pagination, so stats reflect full filtered set)
-        $statsIds = (clone $query)->select('registertuts.id')->pluck('id');
+        // Always exclude refunded registrations from stats calculations
+        $statsIds = (clone $query)->where('registertuts.refunded', false)->select('registertuts.id')->pluck('id');
 
         // Compute stats from the filtered IDs
         $totalConfirmed = Registertut::whereIn('id', $statsIds)
@@ -732,8 +742,14 @@ class CourseController extends Controller
               });
         });
 
-        // Exclude refunded registrations (must match allRegistrations logic)
-        $query->where('registertuts.refunded', false);
+        // Filter by refunded status (show/hide/only — default: show all)
+        if ($request->filled('refunded')) {
+            if ($request->refunded === 'hide') {
+                $query->where('registertuts.refunded', false);
+            } elseif ($request->refunded === 'only') {
+                $query->where('registertuts.refunded', true);
+            }
+        }
 
         if ($request->filled('course_id')) {
             $query->where('course_id', $request->course_id);
