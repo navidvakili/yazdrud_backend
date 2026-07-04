@@ -728,9 +728,9 @@ class CourseController extends Controller
     }
 
     /**
-     * Export registrations as CSV based on current filters.
+     * Export registrations as XLSX based on current filters.
      */
-    public function exportRegistrations(Request $request): \Illuminate\Http\Response
+    public function exportRegistrations(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         // Build same query as allRegistrations but without pagination
         $query = Registertut::with(['course', 'payment.transaction']);
@@ -810,55 +810,11 @@ class CourseController extends Controller
             }
         }
 
-        $registrations = $query->orderBy('created_at', 'asc')->get();
-
-        // Build CSV with UTF-8 BOM for Persian text
-        $csv = "\xEF\xBB\xBF"; // BOM
-        $csv .= "ردیف,کد فراگیر,کد ملی,نام,شماره دانشجویی,موبایل,ایمیل,نوع کاربر,دوره آموزشی,مبلغ,نوع پرداخت,شماره پیگیری,تاریخ ثبت نام,وضعیت\n";
-
-        $i = 1;
-        foreach ($registrations as $reg) {
-            $amount = $reg->payment_method === 'online'
-                ? intval($reg->payment?->transaction?->price ?? 0)
-                : intval($reg->course?->amount ?? 0);
-
-            $createdAt = $this->toJalali($reg->created_at, 'Y/m/d H:i') ?? '';
-            $trackingCode = $reg->payment?->transaction?->tracking_code ?? '';
-
-            $row = [
-                $i,
-                $reg->enrollment_code ?? '',
-                $reg->kodmeli,
-                $reg->fullname,
-                $reg->id_edu ?? '',
-                $reg->mobile,
-                $reg->email ?? '',
-                $reg->type_text ?? '',
-                $reg->course?->title ?? '',
-                number_format($amount),
-                $reg->payment_method === 'online' ? 'پرداخت آنلاین' : 'فیش بانکی',
-                $trackingCode,
-                $createdAt,
-                $reg->actual_status_text,
-            ];
-
-            // Properly escape CSV fields
-            $escaped = array_map(function ($field) {
-                $field = str_replace('"', '""', $field);
-                if (strpos($field, ',') !== false || strpos($field, '"') !== false || strpos($field, "\n") !== false) {
-                    return '"' . $field . '"';
-                }
-                return $field;
-            }, $row);
-
-            $csv .= implode(',', $escaped) . "\n";
-            $i++;
-        }
-
-        return response($csv, 200, [
-            'Content-Type'        => 'text/csv; charset=utf-8',
-            'Content-Disposition' => 'attachment; filename="registrations-report.csv"',
-        ]);
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\RegistrationsExport($query),
+            'registrations-report.xlsx',
+            \Maatwebsite\Excel\Excel::XLSX
+        );
     }
 
     /**
