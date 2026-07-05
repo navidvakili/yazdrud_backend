@@ -284,9 +284,21 @@ class CouponController extends Controller
             }
         }
 
+        // Check group restriction
+        if ($coupon->group_id && $request->filled('course_id')) {
+            $course = Course::find($request->course_id);
+            if (!$course || (int) $course->group_id !== (int) $coupon->group_id) {
+                return response()->json([
+                    'valid'   => false,
+                    'message' => 'این بن تخفیف برای دوره‌های این گروه قابل استفاده نیست.',
+                ]);
+            }
+        }
+
         // Check national code restriction
         if ($coupon->national_code && $request->filled('national_code')) {
-            if ($coupon->national_code !== $request->national_code) {
+            $allowedCodes = array_map('trim', explode(',', $coupon->national_code));
+            if (!in_array($request->national_code, $allowedCodes, true)) {
                 return response()->json([
                     'valid'   => false,
                     'message' => 'این بن تخفیف فقط برای کد ملی مشخص‌شده قابل استفاده است.',
