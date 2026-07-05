@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\CourseSurveyExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseSurvey;
 use App\Models\Course;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class SurveyController extends Controller
 {
@@ -200,5 +202,40 @@ class SurveyController extends Controller
                 'recent_surveys'    => $recentSurveys,
             ],
         ]);
+    }
+
+    /**
+     * Export surveys as Excel file (with current filters).
+     */
+    public function export(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $query = CourseSurvey::with('course');
+
+        // Filter by course
+        if ($request->filled('course_id')) {
+            $query->where('course_id', $request->course_id);
+        }
+
+        // Search by name or phone
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('phone_number', 'like', "%{$search}%");
+            });
+        }
+
+        // Date range
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        $fileName = 'survey-report_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new CourseSurveyExport($query), $fileName);
     }
 }
