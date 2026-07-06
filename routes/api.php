@@ -36,7 +36,7 @@ Route::get('/certificates/verify/{encryptedNumber}', [\App\Http\Controllers\Api\
 // Public certificate PDF display via token query param (for iframe dialog — no CORS)
 Route::get('/certificates/public-view/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'publicView']);
 
-// ==================== Session Warnings (Concurrent Login) ====================
+// ==================== Session Warnings (Concurrent Login — unauthenticated endpoints) ====================
 Route::post('/session-warnings', [\App\Http\Controllers\Api\SessionWarningController::class, 'store']);
 Route::get('/session-warnings/{id}/status', [\App\Http\Controllers\Api\SessionWarningController::class, 'status']);
 Route::post('/session-warnings/login', [\App\Http\Controllers\Api\SessionWarningController::class, 'login']);
@@ -73,109 +73,8 @@ Route::delete('/registrations/{id}', [\App\Http\Controllers\Api\RegistrationCont
 Route::post('/coupons/validate', [\App\Http\Controllers\Api\CouponController::class, 'validate']);
 
 // ==================== Authenticated Routes ====================
-Route::middleware('auth:api')->group(function () {
-    // Current user
-    Route::get('/user', [AuthController::class, 'user']);
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::put('/user/profile', [AuthController::class, 'updateProfile']);
-    Route::put('/user/password', [AuthController::class, 'updatePassword']);
-    Route::put('/user/switch-role', [AuthController::class, 'switchRole']);
-    Route::put('/user/theme', [AuthController::class, 'updateTheme']);
-    Route::post('/user/verify-password', [AuthController::class, 'verifyPassword']);
-
-    // ==================== Session Warnings (Concurrent Login) ====================
-    Route::get('/session-warnings/pending', [\App\Http\Controllers\Api\SessionWarningController::class, 'pending']);
-    Route::post('/session-warnings/{id}/respond', [\App\Http\Controllers\Api\SessionWarningController::class, 'respond']);
-
-    // ==================== Active Sessions Management ====================
-    Route::prefix('user/sessions')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\SessionController::class, 'index']);
-        Route::post('/{tokenId}/revoke', [\App\Http\Controllers\Api\SessionController::class, 'revoke']);
-    });
-
-    // ==================== Admin: All Active Sessions ====================
-    Route::prefix('admin/sessions')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\SessionController::class, 'adminIndex']);
-        Route::post('/{tokenId}/revoke', [\App\Http\Controllers\Api\SessionController::class, 'adminRevoke']);
-    });
-
-    // ==================== Navigation & Permissions ====================
-    Route::get('/navigation', [\App\Http\Controllers\Api\NavigationController::class, 'index']);
-    Route::get('/user/roles', [\App\Http\Controllers\Api\NavigationController::class, 'roles']);
-    Route::get('/user/permissions', [\App\Http\Controllers\Api\NavigationController::class, 'permissions']);
-
-    // ==================== Dashboard (پین‌ها و داشبورد) ====================
-    Route::prefix('dashboard')->group(function () {
-        Route::get('/pinned-menus', [\App\Http\Controllers\Api\DashboardController::class, 'pinnedMenus']);
-        Route::post('/pin', [\App\Http\Controllers\Api\DashboardController::class, 'pin']);
-        Route::post('/unpin', [\App\Http\Controllers\Api\DashboardController::class, 'unpin']);
-    });
-
-    // ==================== Courses (دوره‌های آموزشی) ====================
-    Route::prefix('courses')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\CourseController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\Api\CourseController::class, 'store']);
-        Route::get('/statistics', [\App\Http\Controllers\Api\CourseStatisticsController::class, 'statistics']);
-        Route::get('/statistics/detailed', [\App\Http\Controllers\Api\CourseStatisticsController::class, 'index']);
-        Route::get('/registrations', [\App\Http\Controllers\Api\CourseController::class, 'allRegistrations']);
-        Route::get('/registrations/export', [\App\Http\Controllers\Api\CourseController::class, 'exportRegistrations']);
-        Route::get('/{id}', [\App\Http\Controllers\Api\CourseController::class, 'show']);
-        Route::put('/{id}', [\App\Http\Controllers\Api\CourseController::class, 'update']);
-        Route::delete('/{id}', [\App\Http\Controllers\Api\CourseController::class, 'destroy']);
-        Route::put('/{id}/toggle-active', [\App\Http\Controllers\Api\CourseController::class, 'toggleActive']);
-        Route::get('/{id}/registrations', [\App\Http\Controllers\Api\CourseController::class, 'registrations']);
-        Route::post('/registrations/{id}/approve-receipt', [\App\Http\Controllers\Api\CourseController::class, 'approveReceipt']);
-        Route::post('/registrations/{id}/reject-receipt', [\App\Http\Controllers\Api\CourseController::class, 'rejectReceipt']);
-        Route::post('/registrations/{id}/refund', [\App\Http\Controllers\Api\CourseController::class, 'refundRegistration']);
-        Route::post('/registrations/{id}/undo-refund', [\App\Http\Controllers\Api\CourseController::class, 'undoRefundRegistration']);
-        Route::put('/registrations/{id}', [\App\Http\Controllers\Api\CourseController::class, 'updateRegistration']);
-    });
-
-    // ==================== Surveys (نظرسنجی دوره‌ها) ====================
-    Route::prefix('surveys')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\SurveyController::class, 'index']);
-        Route::get('/statistics', [\App\Http\Controllers\Api\SurveyController::class, 'statistics']);
-        Route::get('/export', [\App\Http\Controllers\Api\SurveyController::class, 'export']);
-        Route::get('/{id}', [\App\Http\Controllers\Api\SurveyController::class, 'show']);
-        Route::delete('/{id}', [\App\Http\Controllers\Api\SurveyController::class, 'destroy']);
-    });
-
-    // ==================== Coupons / Vouchers (بن خرید و تخفیف) ====================
-    Route::prefix('coupons')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\CouponController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\Api\CouponController::class, 'store']);
-        Route::get('/generate-code', [\App\Http\Controllers\Api\CouponController::class, 'generateCode']);
-        Route::post('/generate', [\App\Http\Controllers\Api\CouponController::class, 'generate']);
-        Route::get('/courses', [\App\Http\Controllers\Api\CouponController::class, 'courses']);
-        Route::get('/{id}', [\App\Http\Controllers\Api\CouponController::class, 'show']);
-        Route::put('/{id}', [\App\Http\Controllers\Api\CouponController::class, 'update']);
-        Route::delete('/{id}', [\App\Http\Controllers\Api\CouponController::class, 'destroy']);
-    });
-
-    // ==================== Course Groups (گروه‌های آموزشی و کارگاهی) ====================
-    Route::prefix('course-groups')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\CourseGroupController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\Api\CourseGroupController::class, 'store']);
-        Route::put('/{id}', [\App\Http\Controllers\Api\CourseGroupController::class, 'update']);
-        Route::delete('/{id}', [\App\Http\Controllers\Api\CourseGroupController::class, 'destroy']);
-    });
-
-    // ==================== Instructors (اساتید دوره‌ها) ====================
-    Route::prefix('instructors')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\InstructorController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\Api\InstructorController::class, 'store']);
-        Route::get('/{id}', [\App\Http\Controllers\Api\InstructorController::class, 'show']);
-        Route::put('/{id}', [\App\Http\Controllers\Api\InstructorController::class, 'update']);
-        Route::delete('/{id}', [\App\Http\Controllers\Api\InstructorController::class, 'destroy']);
-    });
-
-    // ==================== Certificates (صدور گواهی دوره‌ها) ====================
-    Route::prefix('certificates')->group(function () {
-        // Static routes MUST come before parameterized routes
-        Route::get('/', [\App\Http\Controllers\Api\CertificateController::class, 'index']);
-        Route::post('/approve-all', [\App\Http\Controllers\Api\CertificateController::class, 'approveAll']);
-        Route::get('/download-all', [\App\Http\Controllers\Api\CertificateController::class, 'downloadAll']);
-        Route::post('/approve/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'approve']);
-        Route::post('/reject/{registerId}', [\App\Http\Controllers\Api\CertificateController::class, 'reject']);
-    });
+Route::group(['middleware' => 'auth:api'], function () {
+    foreach (glob(__DIR__ . '/api/*.php') as $file_name) {
+        include_once $file_name;
+    }
 });
