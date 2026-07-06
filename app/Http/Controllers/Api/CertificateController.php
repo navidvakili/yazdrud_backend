@@ -64,8 +64,10 @@ class CertificateController extends Controller
         // Search by name or national code
         if ($request->filled('search')) {
             $search = $request->search;
+            // Normalize Arabic→Persian and normalize DB column to match
+            $search = str_replace(['ي', 'ك', 'ة', 'أ', 'إ', 'ؤ'], ['ی', 'ک', 'ه', 'ا', 'ا', 'و'], $search);
             $query->where(function ($q) use ($search) {
-                $q->where('fullname', 'like', "%{$search}%")
+                $q->where(DB::raw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(fullname, 'ي', 'ی'), 'ك', 'ک'), 'ة', 'ه'), 'أ', 'ا'), 'ؤ', 'و')"), 'like', "%{$search}%")
                   ->orWhere('kodmeli', 'like', "%{$search}%")
                   ->orWhere('mobile', 'like', "%{$search}%");
             });

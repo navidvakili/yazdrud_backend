@@ -603,10 +603,11 @@ class CourseController extends Controller
         // Search by name, kodmeli, mobile, id_edu
         if ($request->filled('search')) {
             $search = $request->search;
-            // Normalize Persian/Arabic characters: ي→ی, ك→ک, and convert digits
-            $search = str_replace(['ي', 'ك'], ['ی', 'ک'], $search);
+            // Normalize Arabic→Persian to match frontend normalization
+            // Also normalize DB column with REPLACE to handle mixed encodings
+            $search = str_replace(['ي', 'ك', 'ة', 'أ', 'إ', 'ؤ'], ['ی', 'ک', 'ه', 'ا', 'ا', 'و'], $search);
             $query->where(function ($q) use ($search) {
-                $q->where('fullname', 'like', "%{$search}%")
+                $q->where(DB::raw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(fullname, 'ي', 'ی'), 'ك', 'ک'), 'ة', 'ه'), 'أ', 'ا'), 'ؤ', 'و')"), 'like', "%{$search}%")
                   ->orWhere('kodmeli', 'like', "%{$search}%")
                   ->orWhere('mobile', 'like', "%{$search}%")
                   ->orWhere('id_edu', 'like', "%{$search}%");
@@ -757,9 +758,10 @@ class CourseController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $search = str_replace(['ي', 'ك'], ['ی', 'ک'], $search);
+            // Normalize Arabic→Persian and normalize DB column to match
+            $search = str_replace(['ي', 'ك', 'ة', 'أ', 'إ', 'ؤ'], ['ی', 'ک', 'ه', 'ا', 'ا', 'و'], $search);
             $query->where(function ($q) use ($search) {
-                $q->where('fullname', 'like', "%{$search}%")
+                $q->where(DB::raw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(fullname, 'ي', 'ی'), 'ك', 'ک'), 'ة', 'ه'), 'أ', 'ا'), 'ؤ', 'و')"), 'like', "%{$search}%")
                   ->orWhere('kodmeli', 'like', "%{$search}%")
                   ->orWhere('mobile', 'like', "%{$search}%")
                   ->orWhere('id_edu', 'like', "%{$search}%");
