@@ -26,7 +26,6 @@ class SurveyController extends Controller
             'last_name'          => $survey->last_name,
             'full_name'          => $survey->full_name,
             'phone_number'       => $survey->phone_number,
-            'rating'             => $survey->rating,
             'suggestions'        => $survey->suggestions,
             'comment'            => $survey->comment,
             'ip_address'         => $survey->ip_address,
@@ -106,8 +105,7 @@ class SurveyController extends Controller
             'first_name'   => 'required|string|max:100',
             'last_name'    => 'required|string|max:100',
             'phone_number' => 'required|string|max:20',
-            'rating'       => 'nullable|integer|min:1|max:5',
-            'suggestions'  => 'nullable|string',
+            'suggestions'  => 'required|string',
             'comment'      => 'nullable|string',
         ]);
 
@@ -115,16 +113,35 @@ class SurveyController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Prevent duplicate submissions: same phone + same IP/fingerprint within 30 days
+        $userIp = $request->ip();
+        $browserFingerprint = $request->input('browser_fingerprint');
+        $existingSurvey = CourseSurvey::where('phone_number', $request->phone_number)
+            ->where(function ($query) use ($userIp, $browserFingerprint) {
+                if ($browserFingerprint) {
+                    $query->where('ip_address', $userIp)
+                          ->orWhere('browser_fingerprint', $browserFingerprint);
+                } else {
+                    $query->where('ip_address', $userIp);
+                }
+            })
+            ->where('created_at', '>=', now()->subDays(30))
+            ->first();
+
+        if ($existingSurvey) {
+            return response()->json([
+                'message' => 'شما قبلاً نظرسنجی ثبت کرده‌اید. هر شخص تنها یک بار در ماه می‌تواند نظرسنجی ثبت کند.',
+            ], 429);
+        }
+
         $survey = new CourseSurvey();
-        $survey->course_id          = $request->course_id;
         $survey->first_name         = $request->first_name;
         $survey->last_name          = $request->last_name;
         $survey->phone_number       = $request->phone_number;
-        $survey->rating             = $request->rating;
         $survey->suggestions        = $request->suggestions;
         $survey->comment            = $request->comment;
-        $survey->ip_address         = $request->ip();
-        $survey->browser_fingerprint = $request->input('browser_fingerprint');
+        $survey->ip_address         = $userIp;
+        $survey->browser_fingerprint = $browserFingerprint;
         $survey->save();
 
         return response()->json([
@@ -157,10 +174,8 @@ class SurveyController extends Controller
     {
         $totalSurveys = CourseSurvey::count();
 
-        $averageRating = CourseSurvey::whereNotNull('rating')->avg('rating');
-
         $surveysByCourse = CourseSurvey::with('course')
-            ->selectRaw('course_id, COUNT(*) as count, AVG(rating) as avg_rating')
+            ->selectRaw('course_id, COUNT(*) as count')
             ->whereNotNull('course_id')
             ->groupBy('course_id')
             ->get()
@@ -169,19 +184,6 @@ class SurveyController extends Controller
                     'course_id'    => $item->course_id,
                     'course_title' => $item->course?->title ?? 'نامشخص',
                     'count'        => (int) $item->count,
-                    'avg_rating'   => round((float) $item->avg_rating, 1),
-                ];
-            });
-
-        $ratingsBreakdown = CourseSurvey::whereNotNull('rating')
-            ->selectRaw('rating, COUNT(*) as count')
-            ->groupBy('rating')
-            ->orderBy('rating')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'rating' => (int) $item->rating,
-                    'count'  => (int) $item->count,
                 ];
             });
 
@@ -196,9 +198,7 @@ class SurveyController extends Controller
         return response()->json([
             'data' => [
                 'total_surveys'     => $totalSurveys,
-                'average_rating'    => $averageRating ? round($averageRating, 1) : 0,
                 'surveys_by_course' => $surveysByCourse,
-                'ratings_breakdown' => $ratingsBreakdown,
                 'recent_surveys'    => $recentSurveys,
             ],
         ]);
