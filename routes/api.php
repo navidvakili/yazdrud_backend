@@ -128,6 +128,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/registrations/{id}/reject-receipt', [\App\Http\Controllers\Api\CourseController::class, 'rejectReceipt']);
         Route::post('/registrations/{id}/refund', [\App\Http\Controllers\Api\CourseController::class, 'refundRegistration']);
         Route::post('/registrations/{id}/undo-refund', [\App\Http\Controllers\Api\CourseController::class, 'undoRefundRegistration']);
+        Route::put('/registrations/{id}', [\App\Http\Controllers\Api\CourseController::class, 'updateRegistration']);
     });
 
     // ==================== Surveys (نظرسنجی دوره‌ها) ====================

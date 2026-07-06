@@ -947,4 +947,37 @@ class CourseController extends Controller
             'data'    => $this->formatRegistration($reg),
         ]);
     }
+
+    /**
+     * Update a registration's details.
+     */
+    public function updateRegistration(Request $request, $encryptedId): JsonResponse
+    {
+        $id = Crypt::encryptor('decrypt', $encryptedId);
+        if (!$id) {
+            return response()->json(['message' => 'شناسه نامعتبر است'], 400);
+        }
+
+        $reg = Registertut::find($id);
+        if (!$reg) {
+            return response()->json(['message' => 'ثبت‌نام مورد نظر یافت نشد'], 404);
+        }
+
+        $validated = $request->validate([
+            'fullname'   => 'nullable|string|max:255',
+            'kodmeli'    => 'nullable|string|size:10',
+            'id_edu'     => 'nullable|string',
+            'mobile'     => 'nullable|string|size:11',
+            'type'       => 'nullable|in:1,2',
+            'skills'     => 'nullable|string',
+            'motivation' => 'nullable|string',
+        ]);
+
+        $reg->update($validated);
+
+        return response()->json([
+            'message' => 'اطلاعات ثبت‌نام با موفقیت به‌روزرسانی شد',
+            'data'    => $this->formatRegistration($reg),
+        ]);
+    }
 }
