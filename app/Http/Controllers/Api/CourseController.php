@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Library\Crypt;
 use App\Models\Registertut;
+use App\Services\EnrollmentCodeGenerator;
+use Carbon\Carbon;
 use Hekmatinasser\Verta\Verta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -981,5 +983,90 @@ class CourseController extends Controller
             'message' => 'اطلاعات ثبت‌نام با موفقیت به‌روزرسانی شد',
             'data'    => $this->formatRegistration($reg),
         ]);
+    }
+
+    /**
+     * Manually register a learner to a course (admin-only, bypasses payment).
+     */
+    public function storeRegistration(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'course_id' => 'required|exists:courses,id',
+            'fullname'  => 'required|string|max:255',
+            'kodmeli'   => 'required|string|size:10',
+            'mobile'    => 'required|string|size:11',
+            'type'      => 'required|in:1,2',
+            'id_edu'    => 'nullable|string',
+            'skills'    => 'nullable|string',
+            'motivation'=> 'nullable|string',
+        ]);
+
+        // Normalize Persian digits
+        $validated['kodmeli'] = $this->convertPersianToEnglish($validated['kodmeli']);
+        $validated['mobile'] = $this->convertPersianToEnglish($validated['mobile']);
+
+        // Check for duplicate registration (same national code + course)
+        $existing = Registertut::where('kodmeli', $validated['kodmeli'])
+            ->where('course_id', $validated['course_id'])
+            ->where(function ($q) {
+                $q->where('verified_receipt', true)
+                  ->orWhere(function ($q2) {
+                      $q2->where('payment_method', 'online')
+                         ->whereHas('payment.transaction', function ($q3) {
+                             $q3->where('status', 'SUCCEED');
+                         });
+                  });
+            })
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'message' => 'این فراگیر قبلاً در این دوره ثبت‌نام کرده است.',
+            ], 422);
+        }
+
+        // Generate enrollment code (reuse existing code for same kodmeli)
+        $existingCode = Registertut::where('kodmeli', $validated['kodmeli'])
+            ->whereNotNull('enrollment_code')
+            ->orderBy('created_at', 'desc')
+            ->first();
+        $enrollmentCode = $existingCode
+            ? $existingCode->enrollment_code
+            : app(EnrollmentCodeGenerator::class)->generate();
+
+        // Create the registration (admin-verified, bank receipt method)
+        $reg = Registertut::create([
+            'kodmeli'         => $validated['kodmeli'],
+            'course_id'       => $validated['course_id'],
+            'type'            => $validated['type'],
+            'fullname'        => $validated['fullname'],
+            'id_edu'          => $validated['id_edu'] ?? null,
+            'mobile'          => $validated['mobile'],
+            'skills'          => $validated['skills'] ?? null,
+            'motivation'      => $validated['motivation'] ?? null,
+            'payment_method'  => 'bank',
+            'verified_receipt'=> true,
+            'verified_at'     => Carbon::now(),
+            'status'          => 'approved',
+            'enrollment_code' => $enrollmentCode,
+        ]);
+
+        $reg->course()->increment('registered_count');
+
+        return response()->json([
+            'message' => 'فراگیر با موفقیت به دوره اضافه شد.',
+            'data'    => $this->formatRegistration($reg),
+        ], 201);
+    }
+
+    /**
+     * Convert Persian/Arabic digits to English digits.
+     */
+    private function convertPersianToEnglish($string): string
+    {
+        $persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        $arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+        $englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        return str_replace($arabicDigits, $englishDigits, str_replace($persianDigits, $englishDigits, $string));
     }
 }

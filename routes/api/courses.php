@@ -9,6 +9,7 @@ Route::prefix('courses')->group(function () {
     Route::get('/statistics', [\App\Http\Controllers\Api\CourseStatisticsController::class, 'statistics']);
     Route::get('/statistics/detailed', [\App\Http\Controllers\Api\CourseStatisticsController::class, 'index']);
     Route::get('/registrations', [\App\Http\Controllers\Api\CourseController::class, 'allRegistrations']);
+    Route::post('/registrations', [\App\Http\Controllers\Api\CourseController::class, 'storeRegistration']);
     Route::get('/registrations/export', [\App\Http\Controllers\Api\CourseController::class, 'exportRegistrations']);
     Route::get('/{id}', [\App\Http\Controllers\Api\CourseController::class, 'show']);
     Route::put('/{id}', [\App\Http\Controllers\Api\CourseController::class, 'update']);
