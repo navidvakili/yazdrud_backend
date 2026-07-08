@@ -99,7 +99,7 @@
         <div class="header">
             <div>
                 <h1>گواهی دوره آموزشی</h1>
-                <div class="info">{{ $registration->fullname }} — {{ $registration->course->title ?? '' }}</div>
+                <div class="info">{{ $registration->fullname }} — کدملی: {{ $registration->kodmeli }} — {{ $registration->course->title ?? '' }} @if($registration->course->instructor) — مدرس: {{ $registration->course->instructor }} @endif</div>
             </div>
             <div>
                 <a href="{{ $publicViewUrl }}?download=1" class="btn-download" target="_blank">

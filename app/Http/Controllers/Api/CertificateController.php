@@ -564,6 +564,7 @@ class CertificateController extends Controller
                 'national_code'      => $registration->kodmeli,
                 'course_title'       => $course->title ?? null,
                 'course_duration'    => $course->duration ?? null,
+                'instructor'         => $course->instructor ?? null,
             ],
         ]);
     }
