@@ -814,9 +814,20 @@ class CourseController extends Controller
             }
         }
 
+        // Dynamic filename: use course title if filtering by a single course
+        $fileName = 'registrations-report';
+        if ($request->filled('course_id')) {
+            $courseModel = Course::find($request->course_id);
+            if ($courseModel) {
+                $safeTitle = str_replace(['/', '\\', ' ', '?', '*', '"', "'", '|', '<', '>'], '_', $courseModel->title);
+                $fileName = $safeTitle;
+            }
+        }
+        $fileName .= '_' . date('Y-m-d_His') . '.xlsx';
+
         return \Maatwebsite\Excel\Facades\Excel::download(
             new \App\Exports\RegistrationsExport($query),
-            'registrations-report.xlsx',
+            $fileName,
             \Maatwebsite\Excel\Excel::XLSX
         );
     }
