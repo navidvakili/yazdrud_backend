@@ -219,6 +219,19 @@ class RegistrationController extends Controller
 
             // ========== ONLINE payment ==========
             $amount = (int) $course->amount;
+            $totalInstallments = 0;
+
+            // Apply coupon discount/installment adjustments to gateway amount
+            if ($couponId && $discountAmount > 0) {
+                if ($coupon && $coupon->enable_installment) {
+                    // For installment coupons: only charge what's not deferred as installments
+                    $totalInstallments = (int) $coupon->installmentItems()->sum('amount');
+                    $amount = max(1, $amount - $totalInstallments);
+                } else {
+                    // For regular coupons: apply the discount to the payment amount
+                    $amount = max(1, $amount - $discountAmount);
+                }
+            }
 
             if ($amount > 0) {
                 try {
@@ -254,6 +267,7 @@ class RegistrationController extends Controller
                             'coupon_id'                => $couponId,
                             'discount_amount'          => $discountAmount,
                             'prepayment_amount'        => $prepaymentAmount,
+                            'total_installments'       => $totalInstallments ?: 0,
                         ]),
                         'ip'            => $request->ip(),
                         'payment_date'  => Carbon::now(),
