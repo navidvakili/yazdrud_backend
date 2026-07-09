@@ -133,6 +133,15 @@ class CourseController extends Controller
             'ref_id'           => $reg->payment?->transaction?->ref_id,
             'card_number'      => $reg->payment?->transaction?->card_number,
             'port'             => $reg->payment?->transaction?->port,
+            'coupon_code'      => $reg->coupon?->code,
+            'coupon_title'     => $reg->coupon?->title,
+            'discount_amount'  => (int) ($reg->discount_amount ?? 0),
+            'prepayment_amount' => (int) ($reg->prepayment_amount ?? 0),
+            'has_installment'  => $reg->relationLoaded('installments') && $reg->installments->isNotEmpty(),
+            'installment_total_count' => $reg->installments->count(),
+            'installment_paid_count'  => $reg->installments->where('status', 'paid')->count(),
+            'installment_total_amount' => (int) $reg->installments->sum('amount'),
+            'installment_paid_amount'  => (int) $reg->installments->where('status', 'paid')->sum('paid_amount'),
         ];
     }
 
@@ -576,7 +585,7 @@ class CourseController extends Controller
      */
     public function allRegistrations(Request $request): JsonResponse
     {
-        $query = Registertut::with(['course', 'payment.transaction']);
+        $query = Registertut::with(['course', 'payment.transaction', 'coupon', 'installments']);
 
         // Exclude non-verified online payments: only show online payments
         // that have a SUCCEED transaction (or non-online payments always show)
@@ -736,7 +745,7 @@ class CourseController extends Controller
     public function exportRegistrations(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         // Build same query as allRegistrations but without pagination
-        $query = Registertut::with(['course', 'payment.transaction']);
+        $query = Registertut::with(['course', 'payment.transaction', 'coupon', 'installments']);
 
         $query->where(function ($q) {
             $q->where('payment_method', '!=', 'online')

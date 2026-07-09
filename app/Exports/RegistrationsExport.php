@@ -49,6 +49,11 @@ class RegistrationsExport implements FromCollection, WithHeadings, WithMapping, 
             'مبلغ (ریال)',
             'نوع پرداخت',
             'شماره پیگیری',
+            'کد بن تخفیف',
+            'عنوان بن تخفیف',
+            'مبلغ تخفیف (ریال)',
+            'شرایط تقسیط',
+            'وضعیت اقساط',
             'تاریخ ثبت نام',
             'وضعیت',
         ];
@@ -81,6 +86,11 @@ class RegistrationsExport implements FromCollection, WithHeadings, WithMapping, 
             number_format($amount),
             $reg->payment_method === 'online' ? 'پرداخت آنلاین' : 'فیش بانکی',
             $trackingCode,
+            $reg->coupon?->code ?? '',
+            $reg->coupon?->title ?? '',
+            $reg->discount_amount ? number_format($reg->discount_amount) : '',
+            $this->formatInstallmentCondition($reg),
+            $this->formatInstallmentStatus($reg),
             $createdAt,
             $reg->actual_status_text,
         ];
@@ -92,7 +102,7 @@ class RegistrationsExport implements FromCollection, WithHeadings, WithMapping, 
     public function styles(Worksheet $sheet)
     {
         // Style the header row
-        $sheet->getStyle('A1:N1')->applyFromArray([
+        $sheet->getStyle('A1:S1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'size' => 11,
@@ -112,11 +122,11 @@ class RegistrationsExport implements FromCollection, WithHeadings, WithMapping, 
         $sheet->setRightToLeft(true);
 
         // Auto filter
-        $sheet->setAutoFilter('A1:N1');
+        $sheet->setAutoFilter('A1:S1');
 
         // Border style for all cells
         $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle('A1:N' . $lastRow)->applyFromArray([
+        $sheet->getStyle('A1:S' . $lastRow)->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -129,6 +139,26 @@ class RegistrationsExport implements FromCollection, WithHeadings, WithMapping, 
         ]);
 
         return [];
+    }
+
+    private function formatInstallmentCondition($reg): string
+    {
+        if (!$reg->relationLoaded('installments') || $reg->installments->isEmpty()) {
+            return '';
+        }
+        $total = $reg->installments->count();
+        $amounts = $reg->installments->pluck('amount')->map(fn($v) => number_format($v))->implode(' + ');
+        return "{$total} قسط ({$amounts} ریال)";
+    }
+
+    private function formatInstallmentStatus($reg): string
+    {
+        if (!$reg->relationLoaded('installments') || $reg->installments->isEmpty()) {
+            return '';
+        }
+        $paid = $reg->installments->where('status', 'paid')->count();
+        $total = $reg->installments->count();
+        return "{$paid} از {$total} قسط پرداخت شده";
     }
 
     private function toJalali($date, $format): ?string
