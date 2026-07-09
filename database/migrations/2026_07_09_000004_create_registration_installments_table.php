@@ -23,12 +23,9 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
             $table->unsignedBigInteger('paid_amount')->nullable();
             $table->string('tracking_number', 191)->nullable();
-            $table->unsignedBigInteger('verified_by')->nullable();
+            $table->string('verified_by', 191)->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
-
-            // Foreign key for verified_by (references users table)
-            $table->foreign('verified_by')->references('id')->on('users')->nullOnDelete();
         });
     }
 
