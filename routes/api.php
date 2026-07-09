@@ -58,6 +58,10 @@ Route::get('/public/course-groups', [\App\Http\Controllers\Api\CourseGroupContro
 // ==================== Public Learner Club (باشگاه فراگیران) ====================
 Route::get('/public/learner-club/lookup', [\App\Http\Controllers\Api\LearnerClubController::class, 'lookup']);
 
+// ==================== Public Installment Payment (پرداخت قسط توسط فراگیر) ====================
+Route::post('/public/installments/{installmentId}/pay', [\App\Http\Controllers\Api\InstallmentPaymentController::class, 'pay']);
+Route::any('/public/installments/pay/verify', [\App\Http\Controllers\Api\InstallmentPaymentController::class, 'verify']);
+
 // ==================== Public Registrations API (for frontend website) ====================
 // NOTE: lookup MUST come before {id} to avoid route conflict
 Route::get('/registrations', [\App\Http\Controllers\Api\RegistrationController::class, 'index']);

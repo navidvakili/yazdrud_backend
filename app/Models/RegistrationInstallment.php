@@ -24,6 +24,8 @@ class RegistrationInstallment extends Model
         'paid_amount',
         'tracking_number',
         'verified_by',
+        'gateway_transaction_id',
+        'reminder_sent_at',
         'notes',
     ];
 
@@ -31,6 +33,7 @@ class RegistrationInstallment extends Model
         'amount' => 'integer',
         'paid_amount' => 'integer',
         'paid_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
     ];
 
     /**
@@ -55,6 +58,14 @@ class RegistrationInstallment extends Model
     public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    /**
+     * Get the gateway transaction for this installment payment.
+     */
+    public function gatewayTransaction(): BelongsTo
+    {
+        return $this->belongsTo(GatewayTransaction::class, 'gateway_transaction_id');
     }
 
     /**

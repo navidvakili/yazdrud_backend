@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\GatewayTransaction;
 use App\Models\Registertut;
 use App\Models\RegistertutsPayment;
+use App\Models\RegistrationInstallment;
 use App\Models\TermCoupon;
 use App\Services\IranKishService;
 use App\Services\SmsService;
@@ -203,6 +204,12 @@ class RegistrationController extends Controller
                 $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->resolveEnrollmentCode($validated['kodmeli']);
                 $register->update(['enrollment_code' => $enrollmentCode]);
 
+                // Increment coupon usage count and create installment records
+                if ($couponId && isset($coupon) && $coupon instanceof TermCoupon) {
+                    $coupon->increment('used_count');
+                    $this->createInstallmentRecords($register, $coupon);
+                }
+
                 DB::commit();
 
                 // Send SMS outside transaction so API failure doesn't roll back registration
@@ -293,6 +300,12 @@ class RegistrationController extends Controller
 
                     $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->resolveEnrollmentCode($validated['kodmeli']);
                     $register->update(['enrollment_code' => $enrollmentCode]);
+
+                    // Increment coupon usage count and create installment records
+                    if ($couponId && isset($coupon) && $coupon instanceof TermCoupon) {
+                        $coupon->increment('used_count');
+                        $this->createInstallmentRecords($register, $coupon);
+                    }
 
                     DB::commit();
 
@@ -410,6 +423,12 @@ class RegistrationController extends Controller
             // Generate enrollment code inside transaction (reuse existing if provided, or same kodmeli)
             $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->resolveEnrollmentCode($validated['kodmeli']);
             $register->update(['enrollment_code' => $enrollmentCode]);
+
+            // Increment coupon usage count and create installment records
+            if ($couponId && isset($coupon) && $coupon instanceof TermCoupon) {
+                $coupon->increment('used_count');
+                $this->createInstallmentRecords($register, $coupon);
+            }
 
             DB::commit();
 
@@ -582,6 +601,17 @@ class RegistrationController extends Controller
                 $enrollmentCode = $regData['existing_enrollment_code'] ?? $this->resolveEnrollmentCode($regData['kodmeli']);
                 $register->update(['enrollment_code' => $enrollmentCode]);
 
+                // Increment coupon usage count and create installment records
+                if (!empty($regData['coupon_id'])) {
+                    $coupon = TermCoupon::find($regData['coupon_id']);
+                    if ($coupon) {
+                        $coupon->increment('used_count');
+                        if ($coupon->enable_installment) {
+                            $this->createInstallmentRecords($register, $coupon);
+                        }
+                    }
+                }
+
                 DB::commit();
 
                 // Send SMS outside transaction so API failure doesn't roll back registration
@@ -620,6 +650,33 @@ class RegistrationController extends Controller
                 'message' => 'خطا در پرداخت: ' . $e->getMessage(),
             ]);
             return redirect()->away($redirectPath . '?' . $params);
+        }
+    }
+
+    /**
+     * Create registration_installments from coupon template items.
+     * Called after a Registertut record is created with an installment coupon.
+     */
+    private function createInstallmentRecords(Registertut $register, TermCoupon $coupon): void
+    {
+        if (!$coupon->enable_installment) {
+            return;
+        }
+
+        $items = $coupon->installmentItems()->orderBy('sort_order')->get();
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            RegistrationInstallment::create([
+                'register_id'                => $register->id,
+                'voucher_installment_item_id' => $item->id,
+                'title'                       => $item->title,
+                'amount'                      => (int) $item->amount,
+                'due_date'                    => $item->due_date,
+                'status'                      => 'pending',
+            ]);
         }
     }
 

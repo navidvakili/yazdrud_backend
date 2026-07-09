@@ -4,13 +4,24 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Registertut;
+use App\Models\RegistrationInstallment;
 use App\Library\Crypt;
+use App\Services\SmsService;
+use Hekmatinasser\Verta\Verta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class LearnerClubController extends Controller
 {
+    private SmsService $smsService;
+
+    public function __construct(SmsService $smsService)
+    {
+        $this->smsService = $smsService;
+    }
+
     /**
      * Lookup all registrations for a learner by enrollment code.
      * Used by the public "باشگاه فراگیران" page.
@@ -80,10 +91,56 @@ class LearnerClubController extends Controller
                             'tracking_number' => $inst->tracking_number,
                         ];
                     })->values()->toArray();
+
+                    // ── Auto-send SMS reminder for due installments ──
+                    $todayJalali = Verta::now()->format('Y/m/d');
+                    foreach ($reg->installments as $inst) {
+                        if (
+                            $inst->status === 'pending'
+                            && $inst->due_date && $inst->due_date <= $todayJalali
+                            && !$inst->reminder_sent_at
+                        ) {
+                            try {
+                                $this->smsService->sendByPattern(
+                                    'nzn5zwuedd0kaye',
+                                    ['faragir' => $reg->enrollment_code ?? ''],
+                                    $reg->mobile,
+                                );
+                                $inst->update(['reminder_sent_at' => now()]);
+                                Log::info('Installment reminder SMS sent', [
+                                    'installment_id' => $inst->id,
+                                    'register_id'    => $reg->id,
+                                    'mobile'         => $reg->mobile,
+                                ]);
+                            } catch (\Throwable $e) {
+                                Log::error('Failed to send installment reminder SMS', [
+                                    'installment_id' => $inst->id,
+                                    'error'          => $e->getMessage(),
+                                ]);
+                            }
+                        }
+                    }
                 } elseif ($reg->coupon && $reg->coupon->enable_installment && $reg->coupon->installmentItems && $reg->coupon->installmentItems->isNotEmpty()) {
-                    // Coupon has installment enabled but no registration installments yet (pending creation)
+                    // Coupon has installment enabled — try to match with RegistrationInstallment records
                     $enableInstallment = true;
-                    $installmentItems = $reg->coupon->installmentItems->map(function ($item) {
+                    $installmentItems = $reg->coupon->installmentItems->map(function ($item) use ($reg) {
+                        // Prefer RegistrationInstallment record (with real ID) if it exists
+                        $ri = RegistrationInstallment::where('register_id', $reg->id)
+                            ->where('voucher_installment_item_id', $item->id)
+                            ->first();
+                        if ($ri) {
+                            return [
+                                'id'              => $ri->id,
+                                'title'           => $ri->title,
+                                'amount'          => (int) $ri->amount,
+                                'due_date'        => $ri->due_date,
+                                'status'          => $ri->status,
+                                'paid_at'         => $ri->paid_at ? $this->formatDate($ri->paid_at) : null,
+                                'paid_amount'     => $ri->paid_amount ? (int) $ri->paid_amount : null,
+                                'tracking_number' => $ri->tracking_number,
+                            ];
+                        }
+                        // Fallback: use template item (no RegistrationInstallment yet)
                         return [
                             'id'              => $item->id,
                             'title'           => $item->title,
