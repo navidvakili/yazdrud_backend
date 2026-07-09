@@ -1016,9 +1016,10 @@ class CourseController extends Controller
         $validated['kodmeli'] = $this->convertPersianToEnglish($validated['kodmeli']);
         $validated['mobile'] = $this->convertPersianToEnglish($validated['mobile']);
 
-        // Check for duplicate registration (same national code + course)
+        // Check for duplicate registration (same national code + course, exclude refunded)
         $existing = Registertut::where('kodmeli', $validated['kodmeli'])
             ->where('course_id', $validated['course_id'])
+            ->where('refunded', false)
             ->where(function ($q) {
                 $q->where('verified_receipt', true)
                   ->orWhere(function ($q2) {
