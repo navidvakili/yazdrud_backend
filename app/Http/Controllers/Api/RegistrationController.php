@@ -239,92 +239,92 @@ class RegistrationController extends Controller
             }
 
             if ($amount > 0) {
-                // ── Test mode bypass: skip IranKish gateway ──
-                if (config('app.env') === 'local') {
-                    $register = Registertut::create([
-                        'kodmeli'           => $this->convertPersianToEnglish($validated['kodmeli']),
-                        'course_id'         => $validated['course_id'],
-                        'type'              => $validated['type'],
-                        'fullname'          => $validated['fullname'],
-                        'id_edu'            => $validated['id_edu'] ?? null,
-                        'skills'            => $validated['skills'] ?? null,
-                        'motivation'        => $validated['motivation'] ?? null,
-                        'mobile'            => $this->convertPersianToEnglish($validated['mobile']),
-                        'email'             => $validated['email'] ?? null,
-                        'payment_method'    => 'online',
-                        'status'            => 'paid',
-                        'coupon_id'         => $couponId,
-                        'discount_amount'   => $discountAmount,
-                        'prepayment_amount' => $prepaymentAmount,
-                    ]);
+                // // ── Test mode bypass: skip IranKish gateway ──
+                // if (config('app.env') === 'local') {
+                //     $register = Registertut::create([
+                //         'kodmeli'           => $this->convertPersianToEnglish($validated['kodmeli']),
+                //         'course_id'         => $validated['course_id'],
+                //         'type'              => $validated['type'],
+                //         'fullname'          => $validated['fullname'],
+                //         'id_edu'            => $validated['id_edu'] ?? null,
+                //         'skills'            => $validated['skills'] ?? null,
+                //         'motivation'        => $validated['motivation'] ?? null,
+                //         'mobile'            => $this->convertPersianToEnglish($validated['mobile']),
+                //         'email'             => $validated['email'] ?? null,
+                //         'payment_method'    => 'online',
+                //         'status'            => 'paid',
+                //         'coupon_id'         => $couponId,
+                //         'discount_amount'   => $discountAmount,
+                //         'prepayment_amount' => $prepaymentAmount,
+                //     ]);
 
-                    $course->increment('registered_count');
+                //     $course->increment('registered_count');
 
-                    $id = time();
-                    $gateway = GatewayTransaction::create([
-                        'type'          => FinanceEnum::TUTS->name,
-                        'port'          => 'TEST_BYPASS',
-                        'username'      => $this->convertPersianToEnglish($validated['kodmeli']),
-                        'price'         => $amount,
-                        'ref_id'        => $id,
-                        'tracking_code' => $id,
-                        'card_number'   => '0',
-                        'status'        => 'SUCCEED',
-                        'description'   => json_encode([
-                            'course_id'                => $validated['course_id'],
-                            'kodmeli'                  => $this->convertPersianToEnglish($validated['kodmeli']),
-                            'fullname'                 => $validated['fullname'],
-                            'type'                     => $validated['type'],
-                            'mobile'                   => $this->convertPersianToEnglish($validated['mobile']),
-                            'email'                    => $validated['email'] ?? null,
-                            'id_edu'                   => $validated['id_edu'] ?? null,
-                            'skills'                   => $validated['skills'] ?? null,
-                            'motivation'               => $validated['motivation'] ?? null,
-                            'payment_method'           => $validated['payment_method'],
-                            'existing_enrollment_code' => $validated['existing_enrollment_code'] ?? null,
-                            'coupon_code'              => $couponCode,
-                            'coupon_id'                => $couponId,
-                            'discount_amount'          => $discountAmount,
-                            'prepayment_amount'        => $prepaymentAmount,
-                            'total_installments'       => $totalInstallments ?: 0,
-                            'test_bypass'              => true,
-                        ]),
-                        'ip'            => $request->ip(),
-                        'payment_date'  => Carbon::now(),
-                    ]);
+                //     $id = time();
+                //     $gateway = GatewayTransaction::create([
+                //         'type'          => FinanceEnum::TUTS->name,
+                //         'port'          => 'TEST_BYPASS',
+                //         'username'      => $this->convertPersianToEnglish($validated['kodmeli']),
+                //         'price'         => $amount,
+                //         'ref_id'        => $id,
+                //         'tracking_code' => $id,
+                //         'card_number'   => '0',
+                //         'status'        => 'SUCCEED',
+                //         'description'   => json_encode([
+                //             'course_id'                => $validated['course_id'],
+                //             'kodmeli'                  => $this->convertPersianToEnglish($validated['kodmeli']),
+                //             'fullname'                 => $validated['fullname'],
+                //             'type'                     => $validated['type'],
+                //             'mobile'                   => $this->convertPersianToEnglish($validated['mobile']),
+                //             'email'                    => $validated['email'] ?? null,
+                //             'id_edu'                   => $validated['id_edu'] ?? null,
+                //             'skills'                   => $validated['skills'] ?? null,
+                //             'motivation'               => $validated['motivation'] ?? null,
+                //             'payment_method'           => $validated['payment_method'],
+                //             'existing_enrollment_code' => $validated['existing_enrollment_code'] ?? null,
+                //             'coupon_code'              => $couponCode,
+                //             'coupon_id'                => $couponId,
+                //             'discount_amount'          => $discountAmount,
+                //             'prepayment_amount'        => $prepaymentAmount,
+                //             'total_installments'       => $totalInstallments ?: 0,
+                //             'test_bypass'              => true,
+                //         ]),
+                //         'ip'            => $request->ip(),
+                //         'payment_date'  => Carbon::now(),
+                //     ]);
 
-                    RegistertutsPayment::create([
-                        'transaction_id' => $gateway->id,
-                        'register_id'    => $register->id,
-                    ]);
+                //     RegistertutsPayment::create([
+                //         'transaction_id' => $gateway->id,
+                //         'register_id'    => $register->id,
+                //     ]);
 
-                    $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->resolveEnrollmentCode($validated['kodmeli']);
-                    $register->update(['enrollment_code' => $enrollmentCode]);
+                //     $enrollmentCode = $validated['existing_enrollment_code'] ?? $this->resolveEnrollmentCode($validated['kodmeli']);
+                //     $register->update(['enrollment_code' => $enrollmentCode]);
 
-                    // Increment coupon usage count and create installment records
-                    if ($couponId && isset($coupon) && $coupon instanceof TermCoupon) {
-                        $coupon->increment('used_count');
-                        $this->createInstallmentRecords($register, $coupon);
-                    }
+                //     // Increment coupon usage count and create installment records
+                //     if ($couponId && isset($coupon) && $coupon instanceof TermCoupon) {
+                //         $coupon->increment('used_count');
+                //         $this->createInstallmentRecords($register, $coupon);
+                //     }
 
-                    DB::commit();
+                //     DB::commit();
 
-                    try {
-                        $this->smsService->sendByPattern(
-                            'nzn5zwuedd0kaye',
-                            ['faragir' => $enrollmentCode],
-                            $register->mobile,
-                        );
-                    } catch (\Exception $e) {
-                        // SMS failure in test mode is non-critical
-                        Log::info('Test bypass: SMS skipped', ['mobile' => $register->mobile]);
-                    }
+                //     try {
+                //         $this->smsService->sendByPattern(
+                //             'nzn5zwuedd0kaye',
+                //             ['faragir' => $enrollmentCode],
+                //             $register->mobile,
+                //         );
+                //     } catch (\Exception $e) {
+                //         // SMS failure in test mode is non-critical
+                //         Log::info('Test bypass: SMS skipped', ['mobile' => $register->mobile]);
+                //     }
 
-                    return response()->json([
-                        'message'      => 'ثبت نام شما با موفقیت انجام شد. (محیط تست)',
-                        'registration' => new RegistrationResource($register->fresh(['course', 'payment.transaction'])),
-                    ], 201);
-                }
+                //     return response()->json([
+                //         'message'      => 'ثبت نام شما با موفقیت انجام شد. (محیط تست)',
+                //         'registration' => new RegistrationResource($register->fresh(['course', 'payment.transaction'])),
+                //     ], 201);
+                // }
 
                 try {
                     $callbackUrl = url('api/registrations/verify');

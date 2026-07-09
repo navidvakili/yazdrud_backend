@@ -561,7 +561,7 @@ class CourseController extends Controller
             return response()->json(['message' => 'دوره آموزشی مورد نظر یافت نشد'], 404);
         }
 
-        $registrations = Registertut::with(['course', 'payment.transaction'])
+        $registrations = Registertut::with(['course', 'payment.transaction', 'coupon', 'installments'])
             ->where('course_id', $courseId)
             ->where(function ($q) {
                 // For online payments, only include if transaction is SUCCEED
