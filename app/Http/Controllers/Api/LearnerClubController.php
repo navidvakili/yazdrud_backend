@@ -154,6 +154,18 @@ class LearnerClubController extends Controller
                     })->values()->toArray();
                 }
 
+                // ── Calculate discount & actual paid amount ──
+                $discountAmount = (int) ($reg->discount_amount ?? 0);
+                $actualPaidAmount = (int) ($reg->course?->amount ?? 0);
+                if ($discountAmount > 0) {
+                    if ($enableInstallment && $installmentItems) {
+                        $totalInst = collect($installmentItems)->sum('amount');
+                        $actualPaidAmount = max(0, $actualPaidAmount - $discountAmount - $totalInst);
+                    } else {
+                        $actualPaidAmount = max(0, $actualPaidAmount - $discountAmount);
+                    }
+                }
+
                 return [
                     'registerId'          => $reg->id,
                     'encryptedRegisterId' => Crypt::encryptor('encrypt', $reg->id),
@@ -176,6 +188,12 @@ class LearnerClubController extends Controller
                             count($installmentItems)
                         )
                         : null,
+                    // ── Discount / coupon fields ──
+                    'discountAmount'   => $discountAmount,
+                    'actualPaidAmount' => $actualPaidAmount,
+                    'couponTitle'      => $reg->coupon ? $reg->coupon->title : null,
+                    'couponType'       => $reg->coupon ? $reg->coupon->type_discount : null,
+                    'couponValue'      => $reg->coupon ? (int) $reg->coupon->value : null,
                 ];
             } catch (\Throwable $e) {
                 // Log the error and return a safe fallback for this registration
