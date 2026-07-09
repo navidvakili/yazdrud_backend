@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('course_surveys')) {
+            return;
+        }
         Schema::table('course_surveys', function (Blueprint $table) {
             if (!Schema::hasColumn('course_surveys', 'course_id')) {
                 $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete()->after('id');
@@ -26,6 +29,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('course_surveys')) {
+            return;
+        }
         Schema::table('course_surveys', function (Blueprint $table) {
             $table->dropForeign(['course_id']);
             $table->dropColumn(['course_id', 'rating']);

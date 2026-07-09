@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\GatewayTransaction;
 use App\Models\Registertut;
 use App\Models\RegistertutsPayment;
+use App\Models\TermCoupon;
 use App\Services\IranKishService;
 use App\Services\SmsService;
 use App\Services\EnrollmentCodeGenerator;
@@ -82,6 +83,7 @@ class RegistrationController extends Controller
             'motivation'               => 'nullable|string',
             'payment_method'           => 'required|in:online,bank',
             'existing_enrollment_code' => 'nullable|string|size:7',
+            'coupon_code'              => 'nullable|string|max:191',
         ]);
 
         // Check for existing successful registration (not failed attempts)
@@ -104,6 +106,47 @@ class RegistrationController extends Controller
             ], 422);
         }
 
+        // Resolve coupon if provided
+        $couponId = null;
+        $discountAmount = 0;
+        $prepaymentAmount = null;
+        $couponCode = $request->input('coupon_code');
+
+        if ($couponCode) {
+            $coupon = TermCoupon::where('code', strtoupper($couponCode))->first();
+            if ($coupon && $coupon->is_active && $coupon->used_count < $coupon->capacity) {
+                // Check date validity
+                $todayJalali = \Verta::now()->format('Y/m/d');
+                $dateValid = true;
+                $startDate = $coupon->start_date ? $this->convertPersianToEnglish($coupon->start_date) : null;
+                $finishDate = $coupon->finish_date ? $this->convertPersianToEnglish($coupon->finish_date) : null;
+                if ($startDate && $startDate !== '0' && $todayJalali < $startDate) $dateValid = false;
+                if ($dateValid && $finishDate && $finishDate !== '0' && $todayJalali > $finishDate) $dateValid = false;
+
+                // Check course restriction
+                if ($dateValid && $coupon->course_id && (int) $coupon->course_id !== (int) $validated['course_id']) {
+                    $dateValid = false;
+                }
+
+                if ($dateValid) {
+                    $couponId = $coupon->id;
+                    $courseAmount = (int) $course->amount;
+                    if ($coupon->type_discount === 'percent') {
+                        $discountAmount = (int) round(($courseAmount * $coupon->value) / 100);
+                    } else {
+                        $discountAmount = (int) $coupon->value;
+                    }
+                    // Apply max_discount cap
+                    if ($coupon->max_discount && $discountAmount > $coupon->max_discount) {
+                        $discountAmount = (int) $coupon->max_discount;
+                    }
+                    if ($coupon->enable_installment) {
+                        $prepaymentAmount = $coupon->prepayment_amount;
+                    }
+                }
+            }
+        }
+
         DB::beginTransaction();
 
         try {
@@ -118,17 +161,20 @@ class RegistrationController extends Controller
             // ========== BANK RECEIPT payment ==========
             if ($validated['payment_method'] === 'bank') {
                 $register = Registertut::create([
-                    'kodmeli'        => $this->convertPersianToEnglish($validated['kodmeli']),
-                    'course_id'      => $validated['course_id'],
-                    'type'           => $validated['type'],
-                    'fullname'       => $validated['fullname'],
-                    'id_edu'         => $validated['id_edu'] ?? null,
-                    'skills'         => $validated['skills'] ?? null,
-                    'motivation'     => $validated['motivation'] ?? null,
-                    'mobile'         => $this->convertPersianToEnglish($validated['mobile']),
-                    'email'          => $validated['email'] ?? null,
-                    'payment_method' => $validated['payment_method'],
-                    'status'         => 'pending',
+                    'kodmeli'           => $this->convertPersianToEnglish($validated['kodmeli']),
+                    'course_id'         => $validated['course_id'],
+                    'type'              => $validated['type'],
+                    'fullname'          => $validated['fullname'],
+                    'id_edu'            => $validated['id_edu'] ?? null,
+                    'skills'            => $validated['skills'] ?? null,
+                    'motivation'        => $validated['motivation'] ?? null,
+                    'mobile'            => $this->convertPersianToEnglish($validated['mobile']),
+                    'email'             => $validated['email'] ?? null,
+                    'payment_method'    => $validated['payment_method'],
+                    'status'            => 'pending',
+                    'coupon_id'         => $couponId,
+                    'discount_amount'   => $discountAmount,
+                    'prepayment_amount' => $prepaymentAmount,
                 ]);
 
                 $course->increment('registered_count');
@@ -204,6 +250,10 @@ class RegistrationController extends Controller
                             'motivation'               => $validated['motivation'] ?? null,
                             'payment_method'           => $validated['payment_method'],
                             'existing_enrollment_code' => $validated['existing_enrollment_code'] ?? null,
+                            'coupon_code'              => $couponCode,
+                            'coupon_id'                => $couponId,
+                            'discount_amount'          => $discountAmount,
+                            'prepayment_amount'        => $prepaymentAmount,
                         ]),
                         'ip'            => $request->ip(),
                         'payment_date'  => Carbon::now(),
@@ -227,17 +277,20 @@ class RegistrationController extends Controller
 
             // ========== FREE course ==========
             $register = Registertut::create([
-                'kodmeli'        => $this->convertPersianToEnglish($validated['kodmeli']),
-                'course_id'      => $validated['course_id'],
-                'type'           => $validated['type'],
-                'fullname'       => $validated['fullname'],
-                'id_edu'         => $validated['id_edu'] ?? null,
-                'skills'         => $validated['skills'] ?? null,
-                'motivation'     => $validated['motivation'] ?? null,
-                'mobile'         => $this->convertPersianToEnglish($validated['mobile']),
-                'email'          => $validated['email'] ?? null,
-                'payment_method' => $validated['payment_method'],
-                'status'         => 'paid',
+                'kodmeli'           => $this->convertPersianToEnglish($validated['kodmeli']),
+                'course_id'         => $validated['course_id'],
+                'type'              => $validated['type'],
+                'fullname'          => $validated['fullname'],
+                'id_edu'            => $validated['id_edu'] ?? null,
+                'skills'            => $validated['skills'] ?? null,
+                'motivation'        => $validated['motivation'] ?? null,
+                'mobile'            => $this->convertPersianToEnglish($validated['mobile']),
+                'email'             => $validated['email'] ?? null,
+                'payment_method'    => $validated['payment_method'],
+                'status'            => 'paid',
+                'coupon_id'         => $couponId,
+                'discount_amount'   => $discountAmount,
+                'prepayment_amount' => $prepaymentAmount,
             ]);
 
             $course->increment('registered_count');
@@ -400,17 +453,20 @@ class RegistrationController extends Controller
 
                 // Create the Registertut record NOW, after successful payment
                 $register = Registertut::create([
-                    'kodmeli'        => $regData['kodmeli'],
-                    'course_id'      => $regData['course_id'],
-                    'type'           => $regData['type'] ?? '1',
-                    'fullname'       => $regData['fullname'],
-                    'id_edu'         => $regData['id_edu'] ?? null,
-                    'skills'         => $regData['skills'] ?? null,
-                    'motivation'     => $regData['motivation'] ?? null,
-                    'mobile'         => $regData['mobile'],
-                    'email'          => $regData['email'] ?? null,
-                    'payment_method' => 'online',
-                    'status'         => 'paid',
+                    'kodmeli'           => $regData['kodmeli'],
+                    'course_id'         => $regData['course_id'],
+                    'type'              => $regData['type'] ?? '1',
+                    'fullname'          => $regData['fullname'],
+                    'id_edu'            => $regData['id_edu'] ?? null,
+                    'skills'            => $regData['skills'] ?? null,
+                    'motivation'        => $regData['motivation'] ?? null,
+                    'mobile'            => $regData['mobile'],
+                    'email'             => $regData['email'] ?? null,
+                    'payment_method'    => 'online',
+                    'status'            => 'paid',
+                    'coupon_id'         => $regData['coupon_id'] ?? null,
+                    'discount_amount'   => $regData['discount_amount'] ?? 0,
+                    'prepayment_amount' => $regData['prepayment_amount'] ?? null,
                 ]);
 
                 // Increment course registered count

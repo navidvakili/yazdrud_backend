@@ -27,6 +27,9 @@ class TermCoupon extends Model
         'value',
         'max_discount',
         'national_code',
+        'enable_installment',
+        'prepayment_amount',
+        'payment_method',
     ];
 
     /**
@@ -43,6 +46,8 @@ class TermCoupon extends Model
         'used_count' => 'integer',
         'value' => 'integer',
         'max_discount' => 'integer',
+        'enable_installment' => 'boolean',
+        'prepayment_amount' => 'integer',
     ];
 
     /**
@@ -51,6 +56,22 @@ class TermCoupon extends Model
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id');
+    }
+
+    /**
+     * Get the installment items for this coupon (voucher installment plan).
+     */
+    public function installmentItems()
+    {
+        return $this->hasMany(VoucherInstallmentItem::class, 'term_coupon_id')->orderBy('sort_order');
+    }
+
+    /**
+     * Get the registrations that used this coupon.
+     */
+    public function registrations()
+    {
+        return $this->hasMany(Registertut::class, 'coupon_id');
     }
 
     /**

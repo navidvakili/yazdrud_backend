@@ -34,7 +34,7 @@ class LearnerClubController extends Controller
         $code = trim($request->code);
 
         // Search only by enrollment code (کد فراگیر)
-        $registrations = Registertut::with(['course', 'certificate'])
+        $registrations = Registertut::with(['course', 'certificate', 'installments', 'coupon.installmentItems'])
             ->where('enrollment_code', $code)
             ->where('refunded', false)
             ->orderBy('created_at', 'desc')
@@ -63,6 +63,40 @@ class LearnerClubController extends Controller
             try {
                 $hasCertificate = (bool) $reg->certificate_approved;
 
+                // Build installment data if the registration has installments
+                $installmentItems = null;
+                $enableInstallment = false;
+                if ($reg->installments && $reg->installments->isNotEmpty()) {
+                    $enableInstallment = true;
+                    $installmentItems = $reg->installments->map(function ($inst) {
+                        return [
+                            'id'              => $inst->id,
+                            'title'           => $inst->title,
+                            'amount'          => (int) $inst->amount,
+                            'due_date'        => $inst->due_date,
+                            'status'          => $inst->status,
+                            'paid_at'         => $inst->paid_at ? $this->formatDate($inst->paid_at) : null,
+                            'paid_amount'     => $inst->paid_amount ? (int) $inst->paid_amount : null,
+                            'tracking_number' => $inst->tracking_number,
+                        ];
+                    })->values()->toArray();
+                } elseif ($reg->coupon && $reg->coupon->enable_installment && $reg->coupon->installmentItems && $reg->coupon->installmentItems->isNotEmpty()) {
+                    // Coupon has installment enabled but no registration installments yet (pending creation)
+                    $enableInstallment = true;
+                    $installmentItems = $reg->coupon->installmentItems->map(function ($item) {
+                        return [
+                            'id'              => $item->id,
+                            'title'           => $item->title,
+                            'amount'          => (int) $item->amount,
+                            'due_date'        => $item->due_date,
+                            'status'          => 'pending',
+                            'paid_at'         => null,
+                            'paid_amount'     => null,
+                            'tracking_number' => null,
+                        ];
+                    })->values()->toArray();
+                }
+
                 return [
                     'registerId'          => $reg->id,
                     'encryptedRegisterId' => Crypt::encryptor('encrypt', $reg->id),
@@ -76,6 +110,15 @@ class LearnerClubController extends Controller
                     'certificateApproved' => $reg->certificate_approved,
                     'hasCertificate'      => $hasCertificate,
                     'certificateNumber'   => $hasCertificate ? $reg->certificate?->certificate_number : null,
+                    'enableInstallment'   => $enableInstallment,
+                    'installmentItems'    => $installmentItems,
+                    'installmentSummary'  => $enableInstallment && $installmentItems
+                        ? sprintf(
+                            '%d از %d قسط پرداخت شده',
+                            collect($installmentItems)->where('status', 'paid')->count(),
+                            count($installmentItems)
+                        )
+                        : null,
                 ];
             } catch (\Throwable $e) {
                 // Log the error and return a safe fallback for this registration

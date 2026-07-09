@@ -34,6 +34,9 @@ class Registertut extends Model
         'motivation',
         'status',
         'enrollment_code',
+        'coupon_id',
+        'discount_amount',
+        'prepayment_amount',
     ];
 
     protected $casts = [
@@ -69,6 +72,22 @@ class Registertut extends Model
     public function certificate()
     {
         return $this->hasOne(Certificate::class, 'register_id');
+    }
+
+    /**
+     * Get the coupon/voucher applied to this registration.
+     */
+    public function coupon()
+    {
+        return $this->belongsTo(TermCoupon::class, 'coupon_id');
+    }
+
+    /**
+     * Get the installments for this registration.
+     */
+    public function installments()
+    {
+        return $this->hasMany(RegistrationInstallment::class, 'register_id')->orderBy('due_date');
     }
 
     /**
