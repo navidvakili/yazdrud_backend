@@ -175,7 +175,7 @@ class InstallmentFlowTest extends TestCase
             $table->timestamp('paid_at')->nullable();
             $table->integer('paid_amount')->nullable();
             $table->string('tracking_number')->nullable();
-            $table->unsignedBigInteger('verified_by')->nullable();
+            $table->string('verified_by', 191)->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
         });
