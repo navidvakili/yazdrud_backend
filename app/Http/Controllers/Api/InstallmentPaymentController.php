@@ -70,6 +70,42 @@ class InstallmentPaymentController extends Controller
             return response()->json(['message' => 'مبلغ قسط نامعتبر است.'], 422);
         }
 
+        // ── Offline (bank) payment ──
+        if ($installment->payment_method === 'offline') {
+            $trackingNumber = $request->input('tracking_number');
+            $bankName = $request->input('bank_name');
+            $depositDate = $request->input('deposit_date');
+            $receiptImage = null;
+
+            if (!$trackingNumber || !$bankName || !$depositDate) {
+                return response()->json([
+                    'message' => 'لطفاً کد پیگیری، نام بانک و تاریخ واریز را وارد نمایید.',
+                ], 422);
+            }
+
+            // Handle receipt image upload
+            if ($request->hasFile('receipt_image')) {
+                $receiptImage = $request->file('receipt_image')->store('installments', 'public');
+            }
+
+            $installment->update([
+                'tracking_number' => $trackingNumber,
+                'bank_name'       => $bankName,
+                'deposit_date'    => $depositDate,
+                'receipt_image'   => $receiptImage,
+                'status'          => 'pending',
+            ]);
+
+            return response()->json([
+                'message'     => 'اطلاعات پرداخت قسط با موفقیت ثبت شد و پس از تایید مدیر، نهایی خواهد شد.',
+                'installment' => [
+                    'id'     => $installment->id,
+                    'title'  => $installment->title,
+                    'status' => 'pending',
+                ],
+            ], 200);
+        }
+
         // ── IranKish gateway ──
         try {
             $callbackUrl = url('api/public/installments/pay/verify');

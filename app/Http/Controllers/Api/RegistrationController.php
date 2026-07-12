@@ -675,6 +675,7 @@ class RegistrationController extends Controller
                 'title'                       => $item->title,
                 'amount'                      => (int) $item->amount,
                 'due_date'                    => $item->due_date,
+                'payment_method'              => $coupon->payment_method ?? 'online',
                 'status'                      => 'pending',
             ]);
         }

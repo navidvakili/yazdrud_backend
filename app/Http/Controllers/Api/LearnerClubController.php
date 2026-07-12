@@ -89,6 +89,10 @@ class LearnerClubController extends Controller
                             'paid_at'         => $inst->paid_at ? $this->formatDate($inst->paid_at) : null,
                             'paid_amount'     => $inst->paid_amount ? (int) $inst->paid_amount : null,
                             'tracking_number' => $inst->tracking_number,
+                            'payment_method'  => $inst->payment_method ?? 'online',
+                            'bank_name'       => $inst->bank_name,
+                            'deposit_date'    => $inst->deposit_date,
+                            'receipt_image'   => $inst->receipt_image,
                         ];
                     })->values()->toArray();
 
@@ -138,6 +142,10 @@ class LearnerClubController extends Controller
                                 'paid_at'         => $ri->paid_at ? $this->formatDate($ri->paid_at) : null,
                                 'paid_amount'     => $ri->paid_amount ? (int) $ri->paid_amount : null,
                                 'tracking_number' => $ri->tracking_number,
+                                'payment_method'  => $ri->payment_method ?? 'online',
+                                'bank_name'       => $ri->bank_name,
+                                'deposit_date'    => $ri->deposit_date,
+                                'receipt_image'   => $ri->receipt_image,
                             ];
                         }
                         // Fallback: use template item (no RegistrationInstallment yet)
@@ -150,6 +158,10 @@ class LearnerClubController extends Controller
                             'paid_at'         => null,
                             'paid_amount'     => null,
                             'tracking_number' => null,
+                            'payment_method'  => 'online',
+                            'bank_name'       => null,
+                            'deposit_date'    => null,
+                            'receipt_image'   => null,
                         ];
                     })->values()->toArray();
                 }
