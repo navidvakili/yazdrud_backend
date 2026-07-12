@@ -73,7 +73,7 @@ class InstallmentPaymentController extends Controller
         // ── IranKish gateway ──
         try {
             $callbackUrl = url('api/public/installments/pay/verify');
-            $requestId = 'inst_' . $installment->id . '_' . uniqid();
+            $requestId = uniqid();
 
             $result = $this->iranKish->tokenRequest($amount, $callbackUrl, $requestId);
             $token = $result['token'];
@@ -134,7 +134,7 @@ class InstallmentPaymentController extends Controller
     public function verify(Request $request): RedirectResponse
     {
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
-        $redirectPath = $frontendUrl . '/learner-club';
+        $redirectPath = $frontendUrl . '/club';
 
         try {
             $token = $request->input('token');
