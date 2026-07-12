@@ -135,7 +135,7 @@
                 در کارگاه آموزشی<br>
                 <span class="highlight-course">{{ $course_title }}</span><br>
                 @if($instructor && $instructor !== '—')
-                با مدرسی <span class="highlight-detail">{{ $instructor }}</span><br>
+                با تدریس <span class="highlight-detail">{{ $instructor }}</span><br>
                 @endif
                 که <span class="highlight-detail">{{ $course_month_year }}</span> توسط مرکز کارآفرینی و نوآوری دانشگاه علم و هنر به مدت <span class="highlight-detail">{{ $course_duration }} ساعت</span> برگزار گردید، شرکت نموده اند.
             </div>
