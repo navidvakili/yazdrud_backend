@@ -138,7 +138,7 @@ class AuthController extends Controller
             'mobile' => $request->mobile,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'student',
+            'role' => 'user',
         ]);
 
         $token = $user->createToken('portal-api')->accessToken;
@@ -158,7 +158,7 @@ class AuthController extends Controller
      */
     public function user(Request $request): JsonResponse
     {
-        $user = $request->user()->load(['student', 'teacher', 'rolesRelation']);
+        $user = $request->user()->load(['rolesRelation']);
 
         return response()->json([
             'data' => $this->formatUser($user),
@@ -523,9 +523,6 @@ class AuthController extends Controller
             'roles' => $user->roles,
             'sign' => $user->sign,
             'theme' => $user->theme,
-            'has_student_profile' => $user->student()->exists(),
-            'has_teacher_profile' => $user->teacher()->exists(),
-            'has_phd_profile' => $user->phd()->exists(),
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
         ];

@@ -91,43 +91,8 @@ class User extends Authenticatable
         return in_array($role, $this->roles);
     }
 
-    public function thesis()
-    {
-        return $this->hasOne(Thesis::class, 'id_edu', 'username');
-    }
-
-    public function student()
-    {
-        return $this->hasOne(Student::class, 'id_edu', 'username');
-    }
-
-    public function teacher()
-    {
-        return $this->hasOne(Teacher::class, 'id_ostad', 'username');
-    }
-
-    public function fields()
-    {
-        return $this->belongsToMany(Field::class, Accessgroup::class, 'username', 'field_id', 'username', 'id');
-    }
-
-    public function phd()
-    {
-        return $this->hasOne(Phd::class, 'username', 'username');
-    }
-
     public function rolesRelation()
     {
         return $this->hasMany(Role::class, 'username', 'username');
-    }
-
-    public function accessGroups()
-    {
-        return $this->hasMany(Accessgroup::class, 'username', 'username');
-    }
-
-    public function accessColleges()
-    {
-        return $this->hasMany(Accesscollege::class, 'username', 'username');
     }
 }

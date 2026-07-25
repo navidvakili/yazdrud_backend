@@ -229,9 +229,6 @@ class SessionWarningController extends Controller
             'roles' => $user->roles,
             'sign' => $user->sign,
             'theme' => $user->theme,
-            'has_student_profile' => $user->student()->exists(),
-            'has_teacher_profile' => $user->teacher()->exists(),
-            'has_phd_profile' => $user->phd()->exists(),
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
         ];

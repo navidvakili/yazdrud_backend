@@ -26,14 +26,6 @@ class GatewayTransaction extends Model
     ];
 
     /**
-     * Get the payment record for this transaction.
-     */
-    public function payment()
-    {
-        return $this->hasOne(RegistertutsPayment::class, 'transaction_id', 'id');
-    }
-
-    /**
      * Get the user for this transaction.
      */
     public function user()
