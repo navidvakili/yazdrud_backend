@@ -1,0 +1,441 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\News;
+use App\Models\NewsCategory;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+class NewsController extends Controller
+{
+    // ==================== NEWS CRUD ====================
+
+    /**
+     * List news with search, filter, and pagination.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $query = News::query()->with('category');
+
+        // Search by title, summary, tags
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('summary', 'like', "%{$search}%")
+                  ->orWhereRaw('JSON_CONTAINS(tags, ?)', ['"' . $search . '"']);
+            });
+        }
+
+        // Filter by category_id
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->input('category_id'));
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        // Filter by target_audience
+        if ($request->filled('target_audience')) {
+            $query->where('target_audience', $request->input('target_audience'));
+        }
+
+        // Pinned first, then sort
+        $sortBy = $request->input('sort', 'newest');
+        $query->orderBy('is_pinned', 'desc');
+
+        match ($sortBy) {
+            'views' => $query->orderBy('views_count', 'desc'),
+            'likes' => $query->orderBy('likes_count', 'desc'),
+            default => $query->orderBy('id', 'desc'),
+        };
+
+        $perPage = min((int) $request->input('per_page', 15), 50);
+        $news = $query->paginate($perPage);
+
+        $news->getCollection()->transform(function ($item) {
+            return $this->formatNews($item);
+        });
+
+        return response()->json($news);
+    }
+
+    /**
+     * Get a single news article with full details.
+     */
+    public function show(int $id): JsonResponse
+    {
+        $news = News::with('category')->find($id);
+
+        if (!$news) {
+            return response()->json(['message' => 'خبر یافت نشد'], 404);
+        }
+
+        return response()->json([
+            'data' => $this->formatNewsDetailed($news),
+        ]);
+    }
+
+    /**
+     * Create a new news article.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:300',
+            'summary' => 'nullable|string',
+            'content' => 'required|string',
+            'category_id' => 'nullable|integer|exists:news_categories,id',
+            'image_url' => 'nullable|string|max:500',
+            'status' => 'required|in:published,draft,archived',
+            'target_audience' => 'required|in:all,students,professors,staff',
+            'is_pinned' => 'boolean',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string',
+            'attachments' => 'nullable|array',
+            'published_at' => 'nullable|date',
+        ]);
+
+        $user = $request->user();
+
+        $news = News::create([
+            'title' => $validated['title'],
+            'summary' => $validated['summary'] ?? null,
+            'content' => $validated['content'],
+            'category_id' => $validated['category_id'] ?? null,
+            'author_username' => $user->username,
+            'author_name' => trim($user->fname . ' ' . $user->lname),
+            'author_role' => $user->role,
+            'image_url' => $validated['image_url'] ?? null,
+            'is_pinned' => $validated['is_pinned'] ?? false,
+            'status' => $validated['status'],
+            'target_audience' => $validated['target_audience'],
+            'tags' => $validated['tags'] ?? [],
+            'attachments' => $validated['attachments'] ?? [],
+            'published_at' => $validated['status'] === 'published'
+                ? ($validated['published_at'] ?? now())
+                : null,
+        ]);
+
+        return response()->json([
+            'message' => 'خبر با موفقیت ایجاد شد',
+            'data' => $this->formatNewsDetailed($news->load('category')),
+        ], 201);
+    }
+
+    /**
+     * Update a news article.
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $news = News::find($id);
+
+        if (!$news) {
+            return response()->json(['message' => 'خبر یافت نشد'], 404);
+        }
+
+        $validated = $request->validate([
+            'title' => 'sometimes|required|string|max:300',
+            'summary' => 'nullable|string',
+            'content' => 'sometimes|required|string',
+            'category_id' => 'nullable|integer|exists:news_categories,id',
+            'image_url' => 'nullable|string|max:500',
+            'status' => 'sometimes|required|in:published,draft,archived',
+            'target_audience' => 'sometimes|required|in:all,students,professors,staff',
+            'is_pinned' => 'boolean',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string',
+            'attachments' => 'nullable|array',
+            'published_at' => 'nullable|date',
+        ]);
+
+        // If status changed to published and no published_at, set it now
+        if (isset($validated['status']) && $validated['status'] === 'published' && !$news->published_at) {
+            $validated['published_at'] = $validated['published_at'] ?? now();
+        }
+
+        $news->update($validated);
+
+        return response()->json([
+            'message' => 'خبر با موفقیت به‌روزرسانی شد',
+            'data' => $this->formatNewsDetailed($news->fresh()->load('category')),
+        ]);
+    }
+
+    /**
+     * Delete a news article.
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $news = News::find($id);
+
+        if (!$news) {
+            return response()->json(['message' => 'خبر یافت نشد'], 404);
+        }
+
+        $news->delete();
+
+        return response()->json([
+            'message' => 'خبر با موفقیت حذف شد',
+        ]);
+    }
+
+    // ==================== NEWS ACTIONS ====================
+
+    /**
+     * Toggle pinned status of a news article.
+     */
+    public function togglePin(int $id): JsonResponse
+    {
+        $news = News::find($id);
+
+        if (!$news) {
+            return response()->json(['message' => 'خبر یافت نشد'], 404);
+        }
+
+        $news->update(['is_pinned' => !$news->is_pinned]);
+
+        return response()->json([
+            'message' => $news->is_pinned ? 'خبر به اخبار ویژه اضافه شد' : 'خبر از اخبار ویژه حذف شد',
+            'data' => ['is_pinned' => $news->is_pinned],
+        ]);
+    }
+
+    /**
+     * Like a news article (increment likes count).
+     */
+    public function like(int $id): JsonResponse
+    {
+        $news = News::find($id);
+
+        if (!$news) {
+            return response()->json(['message' => 'خبر یافت نشد'], 404);
+        }
+
+        $news->increment('likes_count');
+
+        return response()->json([
+            'data' => ['likes_count' => $news->fresh()->likes_count],
+        ]);
+    }
+
+    /**
+     * Increment views count for a news article.
+     */
+    public function incrementViews(int $id): JsonResponse
+    {
+        $news = News::find($id);
+
+        if (!$news) {
+            return response()->json(['message' => 'خبر یافت نشد'], 404);
+        }
+
+        $news->increment('views_count');
+
+        return response()->json([
+            'data' => ['views_count' => $news->fresh()->views_count],
+        ]);
+    }
+
+    // ==================== CATEGORIES ====================
+
+    /**
+     * List all categories with news count.
+     */
+    public function categories(): JsonResponse
+    {
+        $categories = NewsCategory::orderBy('ordering')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($cat) {
+                return [
+                    'id' => $cat->id,
+                    'name' => $cat->name,
+                    'slug' => $cat->slug,
+                    'color' => $cat->color,
+                    'description' => $cat->description,
+                    'is_active' => $cat->is_active,
+                    'count' => News::where('category_id', $cat->id)->count(),
+                ];
+            });
+
+        return response()->json(['data' => $categories]);
+    }
+
+    /**
+     * Create a new category.
+     */
+    public function storeCategory(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:150',
+            'slug' => 'nullable|string|max:150|unique:news_categories,slug',
+            'color' => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
+
+        $category = NewsCategory::create($validated);
+
+        return response()->json([
+            'message' => 'دسته‌بندی با موفقیت ایجاد شد',
+            'data' => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+                'color' => $category->color,
+                'description' => $category->description,
+                'count' => 0,
+            ],
+        ], 201);
+    }
+
+    /**
+     * Update a category.
+     */
+    public function updateCategory(Request $request, int $id): JsonResponse
+    {
+        $category = NewsCategory::find($id);
+
+        if (!$category) {
+            return response()->json(['message' => 'دسته‌بندی یافت نشد'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:150',
+            'slug' => 'nullable|string|max:150|unique:news_categories,slug,' . $id,
+            'color' => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+        ]);
+
+        $category->update($validated);
+
+        return response()->json([
+            'message' => 'دسته‌بندی با موفقیت به‌روزرسانی شد',
+            'data' => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+                'color' => $category->color,
+                'description' => $category->description,
+                'is_active' => $category->is_active,
+                'count' => News::where('category_id', $category->id)->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Delete a category.
+     */
+    public function destroyCategory(int $id): JsonResponse
+    {
+        $category = NewsCategory::find($id);
+
+        if (!$category) {
+            return response()->json(['message' => 'دسته‌بندی یافت نشد'], 404);
+        }
+
+        // Move news in this category to null (no category)
+        News::where('category_id', $id)->update(['category_id' => null]);
+
+        $category->delete();
+
+        return response()->json([
+            'message' => 'دسته‌بندی با موفقیت حذف شد',
+        ]);
+    }
+
+    // ==================== ANALYTICS ====================
+
+    /**
+     * Get news analytics data.
+     */
+    public function analytics(): JsonResponse
+    {
+        $totalNews = News::count();
+        $publishedNews = News::where('status', 'published')->count();
+        $draftNews = News::where('status', 'draft')->count();
+        $archivedNews = News::where('status', 'archived')->count();
+        $pinnedNews = News::where('is_pinned', true)->count();
+        $totalViews = (int) News::sum('views_count');
+        $totalLikes = (int) News::sum('likes_count');
+
+        // Top 10 most viewed
+        $topViewed = News::orderBy('views_count', 'desc')
+            ->limit(10)
+            ->get(['id', 'title', 'category_id', 'views_count', 'likes_count']);
+
+        // Category distribution
+        $categories = NewsCategory::get(['id', 'name', 'color']);
+        $categoryDistribution = $categories->map(function ($cat) use ($totalNews) {
+            $count = News::where('category_id', $cat->id)->count();
+            return [
+                'id' => $cat->id,
+                'name' => $cat->name,
+                'color' => $cat->color,
+                'count' => $count,
+                'percentage' => $totalNews > 0 ? round(($count / $totalNews) * 100) : 0,
+            ];
+        });
+
+        // Uncategorized count
+        $uncategorizedCount = News::whereNull('category_id')->count();
+
+        return response()->json([
+            'data' => [
+                'total_news' => $totalNews,
+                'published_news' => $publishedNews,
+                'draft_news' => $draftNews,
+                'archived_news' => $archivedNews,
+                'pinned_news' => $pinnedNews,
+                'total_views' => $totalViews,
+                'total_likes' => $totalLikes,
+                'top_viewed' => $topViewed,
+                'category_distribution' => $categoryDistribution,
+                'uncategorized_count' => $uncategorizedCount,
+            ],
+        ]);
+    }
+
+    // ==================== FORMATTERS ====================
+
+    private function formatNews(News $news): array
+    {
+        return [
+            'id' => $news->id,
+            'title' => $news->title,
+            'summary' => $news->summary,
+            'category_id' => $news->category_id,
+            'category_name' => $news->category?->name,
+            'category_color' => $news->category?->color,
+            'author_username' => $news->author_username,
+            'author_name' => $news->author_name,
+            'image_url' => $news->image_url,
+            'views_count' => $news->views_count,
+            'likes_count' => $news->likes_count,
+            'is_pinned' => $news->is_pinned,
+            'status' => $news->status,
+            'target_audience' => $news->target_audience,
+            'tags' => $news->tags ?? [],
+            'published_at' => $news->published_at?->toISOString(),
+            'created_at' => $news->created_at?->toISOString(),
+            'updated_at' => $news->updated_at?->toISOString(),
+        ];
+    }
+
+    private function formatNewsDetailed(News $news): array
+    {
+        return $this->formatNews($news) + [
+            'content' => $news->content,
+            'attachments' => $news->attachments ?? [],
+        ];
+    }
+}
