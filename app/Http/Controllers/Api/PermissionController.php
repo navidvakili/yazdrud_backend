@@ -130,6 +130,11 @@ class PermissionController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Prevent modifying support user
+        if ($request->username === 'support') {
+            return response()->json(['message' => 'امکان تغییر نقش کاربر پشتیبان وجود ندارد'], 403);
+        }
+
         $user = \App\Models\User::find($request->username);
         $user->assignRole($request->role);
 
@@ -153,6 +158,11 @@ class PermissionController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Prevent modifying support user
+        if ($request->username === 'support') {
+            return response()->json(['message' => 'امکان تغییر نقش کاربر پشتیبان وجود ندارد'], 403);
+        }
+
         $user = \App\Models\User::find($request->username);
         $user->removeRole($request->role);
 
@@ -167,6 +177,11 @@ class PermissionController extends Controller
      */
     public function userPermissions(string $username): JsonResponse
     {
+        // Hide support user permissions from everyone
+        if ($username === 'support') {
+            return response()->json(['message' => 'کاربر یافت نشد'], 404);
+        }
+
         $user = \App\Models\User::find($username);
 
         if (!$user) {

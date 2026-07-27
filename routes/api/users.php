@@ -5,11 +5,11 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| User Management Routes (admin only)
+| User Management Routes (admin & support)
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('admin')->middleware('role:admin')->group(function () {
+Route::prefix('admin')->middleware('role_or_permission:admin|support')->group(function () {
     // Users CRUD
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/roles', [UserController::class, 'roles']);

