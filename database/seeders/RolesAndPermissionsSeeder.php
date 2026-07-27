@@ -26,7 +26,6 @@ class RolesAndPermissionsSeeder extends Seeder
         | Each module gets view/create/edit/delete/approve permissions.
         */
         $modules = [
-            'dashboard'    => 'داشبورد',
             'users'        => 'مدیریت کاربران',
             'roles'        => 'مدیریت نقش‌ها',
             'navigation'   => 'مدیریت منو و دسترسی',
@@ -66,7 +65,6 @@ class RolesAndPermissionsSeeder extends Seeder
             // Admin — limited to users, sessions, news management
             $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
             $adminPermissions = Permission::where('guard_name', $guard)->whereIn('name', [
-                'dashboard.view',
                 'users.view', 'users.create', 'users.edit', 'users.delete',
                 'sessions.view', 'sessions.create', 'sessions.edit', 'sessions.delete',
                 'news.view', 'news.create', 'news.edit', 'news.delete', 'news.approve',
@@ -76,7 +74,6 @@ class RolesAndPermissionsSeeder extends Seeder
             // Editor — can view/edit/approve content but not manage users or settings
             $editor = Role::firstOrCreate(['name' => 'editor', 'guard_name' => $guard]);
             $editorPermissions = Permission::where('guard_name', $guard)->whereIn('name', [
-                'dashboard.view',
                 'library.view', 'library.create', 'library.edit',
                 'news.view', 'news.create', 'news.edit', 'news.approve',
                 'services.view', 'services.create', 'services.edit',
@@ -89,7 +86,6 @@ class RolesAndPermissionsSeeder extends Seeder
             // User — view-only access to most modules
             $userRole = Role::firstOrCreate(['name' => 'user', 'guard_name' => $guard]);
             $userPermissions = Permission::where('guard_name', $guard)->whereIn('name', [
-                'dashboard.view',
                 'library.view',
                 'news.view',
                 'services.view',
