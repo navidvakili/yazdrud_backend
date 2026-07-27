@@ -28,12 +28,13 @@ class PermissionController extends Controller
     }
 
     /**
-     * Get all roles with their permissions.
+     * Get all roles with their permissions and user counts.
      */
     public function roles(): JsonResponse
     {
         $roles = Role::where('guard_name', 'api')
             ->with('permissions')
+            ->withCount('users')
             ->get();
 
         return response()->json([
