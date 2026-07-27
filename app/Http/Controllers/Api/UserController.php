@@ -20,7 +20,9 @@ class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = User::query()->where('username', '!=', self::SUPPORT_USERNAME);
+        $query = User::query()
+            ->where('username', '!=', self::SUPPORT_USERNAME)
+            ->where('username', '!=', $request->user()->username);
 
         // Search by username, fname, lname, email, mobile
         if ($request->filled('search')) {
