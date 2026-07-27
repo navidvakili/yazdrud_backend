@@ -59,9 +59,19 @@ class RolesAndPermissionsSeeder extends Seeder
         $guards = ['web', 'api'];
 
         foreach ($guards as $guard) {
-            // Admin — full access to everything
+            // Support (پشتیبان) — full access to everything + role switching
+            $support = Role::firstOrCreate(['name' => 'support', 'guard_name' => $guard]);
+            $support->givePermissionTo(Permission::where('guard_name', $guard)->get());
+
+            // Admin — limited to users, sessions, news management
             $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
-            $admin->givePermissionTo(Permission::where('guard_name', $guard)->get());
+            $adminPermissions = Permission::where('guard_name', $guard)->whereIn('name', [
+                'dashboard.view',
+                'users.view', 'users.create', 'users.edit', 'users.delete',
+                'sessions.view', 'sessions.create', 'sessions.edit', 'sessions.delete',
+                'news.view', 'news.create', 'news.edit', 'news.delete', 'news.approve',
+            ])->get();
+            $admin->givePermissionTo($adminPermissions);
 
             // Editor — can view/edit/approve content but not manage users or settings
             $editor = Role::firstOrCreate(['name' => 'editor', 'guard_name' => $guard]);
@@ -91,7 +101,7 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         $this->command->info('✅ Roles and permissions seeded successfully.');
-        $this->command->info('   Roles: admin, editor, user');
+        $this->command->info('   Roles: support (developer), admin, editor, user');
         $this->command->info('   Permissions: ' . Permission::count() . ' permissions across ' . count($modules) . ' modules');
     }
 }

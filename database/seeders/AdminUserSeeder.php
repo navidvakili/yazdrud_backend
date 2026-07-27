@@ -23,9 +23,9 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        // Assign 'admin' role via Spatie (for api guard)
-        $user->assignRole('admin');
+        // Assign 'support' (developer) and 'admin' roles via Spatie (for api guard)
+        $user->assignRole(['support', 'admin']);
 
-        $this->command->info('✅ کاربر admin با موفقیت ایجاد شد و نقش admin به او اختصاص یافت.');
+        $this->command->info('✅ کاربر admin با موفقیت ایجاد شد و نقش‌های support و admin به او اختصاص یافت.');
     }
 }
