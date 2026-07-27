@@ -34,8 +34,16 @@ class PermissionController extends Controller
     {
         $roles = Role::where('guard_name', 'api')
             ->with('permissions')
-            ->withCount('users')
             ->get();
+
+        // Compute users_count manually because Spatie's Role::users()
+        // joins on users.id, but our User model uses 'username' as PK.
+        $roles->each(function ($role) {
+            $role->users_count = \DB::table('model_has_roles')
+                ->where('model_has_roles.role_id', $role->id)
+                ->where('model_has_roles.model_type', \App\Models\User::class)
+                ->count();
+        });
 
         return response()->json([
             'data' => $roles,

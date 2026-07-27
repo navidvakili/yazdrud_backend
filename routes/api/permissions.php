@@ -5,12 +5,11 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Permission & Role Management Routes (Admin only)
+| Permission & Role Management Routes (Admin & Support)
 |--------------------------------------------------------------------------
 */
 
-// Permission management (admin only — protected with role middleware)
-Route::prefix('admin')->middleware('role:admin')->group(function () {
+Route::prefix('admin')->middleware('role_or_permission:admin|support')->group(function () {
     // Permissions
     Route::get('/permissions', [PermissionController::class, 'index']);
 
