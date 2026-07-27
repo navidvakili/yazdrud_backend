@@ -110,6 +110,7 @@ class SessionController extends Controller
             ->join('users', 'oauth_access_tokens.user_id', '=', 'users.username')
             ->where('oauth_access_tokens.name', 'portal-api')
             ->where('oauth_access_tokens.revoked', 0)
+            ->where('users.username', '!=', 'support')
             ->orderBy('users.username')
             ->orderBy('oauth_access_tokens.created_at', 'desc')
             ->get([
