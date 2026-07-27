@@ -21,5 +21,6 @@ class Access extends Model
 
     protected $casts = [
         'active' => 'boolean',
+        'roles'  => 'array',
     ];
 }

@@ -84,12 +84,4 @@ class User extends Authenticatable
     {
         return $this->getRoleNames()->toArray();
     }
-
-    /**
-     * Check if user has a specific role (direct roles only, no inherited).
-     */
-    public function hasRole(string $role): bool
-    {
-        return $this->hasDirectRole($role);
-    }
 }

@@ -85,10 +85,7 @@ class NavigationController extends Controller
 
         // Get all access items matching the user's current active role
         $allAccesses = Access::where(function ($query) use ($currentRole) {
-                $query->where('roles', 'like', '%|' . $currentRole . '|%')
-                    ->orWhere('roles', 'like', $currentRole . '|%')
-                    ->orWhere('roles', 'like', '%|' . $currentRole)
-                    ->orWhere('roles', $currentRole);
+                $query->whereJsonContains('roles', $currentRole);
             })
             ->where('active', 1)
             ->orderBy('parent', 'asc')
@@ -107,8 +104,8 @@ class NavigationController extends Controller
     {
         $links = [];
 
-        // Get top-level menu items
-        $topItems = $this->getAccessesByRoles($roles, 'top');
+        // Get top-level menu items (parent is null)
+        $topItems = $this->getAccessesByRoles($roles, null);
 
         foreach ($topItems as $row) {
             // Get children for this parent
@@ -140,14 +137,11 @@ class NavigationController extends Controller
     /**
      * Query accesses table filtered by roles and parent.
      */
-    private function getAccessesByRoles(array $roles, string|int $parent): mixed
+    private function getAccessesByRoles(array $roles, string|int|null $parent): mixed
     {
         return Access::where(function ($query) use ($roles) {
                 foreach ($roles as $role) {
-                    $query->orWhere('roles', 'like', '%|' . $role . '|%')
-                        ->orWhere('roles', 'like', $role . '|%')
-                        ->orWhere('roles', 'like', '%|' . $role)
-                        ->orWhere('roles', $role);
+                    $query->orWhereJsonContains('roles', $role);
                 }
             })
             ->where(['active' => 1, 'parent' => $parent])
