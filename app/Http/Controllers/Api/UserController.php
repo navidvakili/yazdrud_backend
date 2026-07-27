@@ -123,11 +123,6 @@ class UserController extends Controller
      */
     public function update(Request $request, string $username): JsonResponse
     {
-        // Prevent modifying support user
-        if ($username === self::SUPPORT_USERNAME) {
-            return response()->json(['message' => 'امکان ویرایش کاربر پشتیبان وجود ندارد'], 403);
-        }
-
         $user = User::find($username);
 
         if (!$user) {
@@ -159,11 +154,6 @@ class UserController extends Controller
      */
     public function updatePassword(Request $request, string $username): JsonResponse
     {
-        // Prevent changing support user password
-        if ($username === self::SUPPORT_USERNAME) {
-            return response()->json(['message' => 'امکان تغییر رمز عبور کاربر پشتیبان وجود ندارد'], 403);
-        }
-
         $user = User::find($username);
 
         if (!$user) {
@@ -192,11 +182,6 @@ class UserController extends Controller
      */
     public function destroy(string $username): JsonResponse
     {
-        // Prevent deleting support user
-        if ($username === self::SUPPORT_USERNAME) {
-            return response()->json(['message' => 'امکان حذف کاربر پشتیبان وجود ندارد'], 403);
-        }
-
         $user = User::find($username);
 
         if (!$user) {
@@ -226,11 +211,6 @@ class UserController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Prevent modifying support user roles
-        if ($request->username === self::SUPPORT_USERNAME) {
-            return response()->json(['message' => 'امکان تغییر نقش کاربر پشتیبان وجود ندارد'], 403);
-        }
-
         $user = User::find($request->username);
         $user->assignRole($request->role);
 
@@ -255,11 +235,6 @@ class UserController extends Controller
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        // Prevent modifying support user roles
-        if ($request->username === self::SUPPORT_USERNAME) {
-            return response()->json(['message' => 'امکان تغییر نقش کاربر پشتیبان وجود ندارد'], 403);
         }
 
         $user = User::find($request->username);
