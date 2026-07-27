@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'scopes' => \Laravel\Passport\Http\Middleware\CheckScopes::class,
             'scope' => \Laravel\Passport\Http\Middleware\CheckForAnyScope::class,
+            'role' => \Spatie\Permission\Http\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Http\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Http\Middleware\RoleOrPermissionMiddleware::class,
         ]);
 
         // Global middleware — CORS handled before any route matching,

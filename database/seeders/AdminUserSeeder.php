@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -11,7 +10,7 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::updateOrCreate(
+        $user = User::updateOrCreate(
             ['username' => 'admin'],
             [
                 'fname'    => 'مدیر',
@@ -24,11 +23,9 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        Role::updateOrCreate(
-            ['username' => 'admin', 'role' => 'admin'],
-            []
-        );
+        // Assign 'admin' role via Spatie (for api guard)
+        $user->assignRole('admin');
 
-        $this->command->info('✅ کاربر admin با موفقیت ایجاد شد.');
+        $this->command->info('✅ کاربر admin با موفقیت ایجاد شد و نقش admin به او اختصاص یافت.');
     }
 }

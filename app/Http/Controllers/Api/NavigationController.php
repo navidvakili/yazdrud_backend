@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Access;
-use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -52,16 +51,16 @@ class NavigationController extends Controller
         $user = $request->user();
         $primaryRole = $user->role;
 
-        // Get all roles from the roles table
-        $roleRecords = Role::where('username', $user->username)->get();
+        // Get all Spatie roles for the user (api guard)
+        $spatieRoleNames = $user->getRoleNames()->toArray();
         $allRoles = [];
+        $id = 0;
 
-        foreach ($roleRecords as $row) {
-            $roleName = $row->role;
+        foreach ($spatieRoleNames as $roleName) {
             $label = self::ROLE_LABELS[$roleName] ?? $roleName;
 
             $allRoles[] = [
-                'id'     => $row->id,
+                'id'     => ++$id,
                 'role'   => $roleName,
                 'label'  => $label,
                 'active' => ($primaryRole === $roleName) ? 1 : 0,

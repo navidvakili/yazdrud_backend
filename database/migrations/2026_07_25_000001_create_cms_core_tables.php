@@ -26,16 +26,6 @@ return new class extends Migration
             $table->timestamp('updated_at')->nullable();
         });
 
-        // ─── Roles ───────────────────────────────────────────────────
-        Schema::create('roles', function (Blueprint $table) {
-            $table->id();
-            $table->string('username', 191);
-            $table->string('role', 50);
-            $table->timestamps();
-            $table->foreign('username')->references('username')->on('users')
-                  ->onDelete('cascade')->onUpdate('cascade');
-        });
-
         // ─── Accesses (navigation / menu items) ──────────────────────
         Schema::create('accesses', function (Blueprint $table) {
             $table->id();
@@ -224,7 +214,6 @@ return new class extends Migration
         Schema::dropIfExists('session_warnings');
         Schema::dropIfExists('user_pinned_menus');
         Schema::dropIfExists('accesses');
-        Schema::dropIfExists('roles');
         Schema::dropIfExists('users');
     }
 };

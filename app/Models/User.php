@@ -8,11 +8,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+
+    /**
+     * Spatie: Use 'api' guard since this app uses Passport.
+     */
+    public string $guard_name = 'api';
 
     public $incrementing = false;
 
@@ -71,28 +77,19 @@ class User extends Authenticatable
     }
 
     /**
-     * Get all roles for the user from the roles table.
+     * Get all roles for the user as an associative array.
+     * Used by AuthController for role listing.
      */
-    public function getRolesAttribute()
+    public function getAllRolesArray(): array
     {
-        $roles = [];
-        $rolesDb = Role::where('username', $this->username)->select('role')->get();
-        foreach ($rolesDb as $item) {
-            $roles[$item->role] = $item->role;
-        }
-        return $roles;
+        return $this->getRoleNames()->toArray();
     }
 
     /**
-     * Check if user has a specific role.
+     * Check if user has a specific role (direct roles only, no inherited).
      */
     public function hasRole(string $role): bool
     {
-        return in_array($role, $this->roles);
-    }
-
-    public function rolesRelation()
-    {
-        return $this->hasMany(Role::class, 'username', 'username');
+        return $this->hasDirectRole($role);
     }
 }

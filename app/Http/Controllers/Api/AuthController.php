@@ -158,7 +158,7 @@ class AuthController extends Controller
      */
     public function user(Request $request): JsonResponse
     {
-        $user = $request->user()->load(['rolesRelation']);
+        $user = $request->user();
 
         return response()->json([
             'data' => $this->formatUser($user),
@@ -342,9 +342,8 @@ class AuthController extends Controller
 
         $newRole = $request->input('role');
 
-        // Verify the user has this role in their roles table
-        $roles = $user->roles;
-        if (!in_array($newRole, $roles)) {
+        // Verify the user has this role via Spatie
+        if (!$user->hasRole($newRole)) {
             return response()->json([
                 'message' => 'شما به این نقش دسترسی ندارید',
             ], 403);
@@ -520,7 +519,8 @@ class AuthController extends Controller
             'mobile' => $user->mobile,
             'email' => $user->email,
             'role' => $user->role,
-            'roles' => $user->roles,
+            'roles' => $user->getAllRolesArray(),
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
             'sign' => $user->sign,
             'theme' => $user->theme,
             'created_at' => $user->created_at,
