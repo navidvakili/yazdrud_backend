@@ -14,12 +14,15 @@ Route::prefix('admin')->middleware('role_or_permission:admin|support')->group(fu
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/roles', [UserController::class, 'roles']);
     Route::post('/users', [UserController::class, 'store']);
-    Route::get('/users/{username}', [UserController::class, 'show']);
-    Route::put('/users/{username}', [UserController::class, 'update']);
-    Route::put('/users/{username}/password', [UserController::class, 'updatePassword']);
-    Route::delete('/users/{username}', [UserController::class, 'destroy']);
 
-    // Role assignment
+    // Role assignment (before {username} wildcard)
     Route::post('/users/assign-role', [UserController::class, 'assignRole']);
     Route::post('/users/remove-role', [UserController::class, 'removeRole']);
+
+    // User-specific routes (order matters — specific before wildcard)
+    Route::get('/users/{username}', [UserController::class, 'show']);
+    Route::put('/users/{username}/toggle-active', [UserController::class, 'toggleActive']);
+    Route::put('/users/{username}/password', [UserController::class, 'updatePassword']);
+    Route::put('/users/{username}', [UserController::class, 'update']);
+    Route::delete('/users/{username}', [UserController::class, 'destroy']);
 });

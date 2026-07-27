@@ -250,6 +250,31 @@ class UserController extends Controller
     }
 
     /**
+     * Toggle user active status (activate/deactivate).
+     */
+    public function toggleActive(string $username): JsonResponse
+    {
+        $user = User::find($username);
+
+        if (!$user) {
+            return response()->json(['message' => 'کاربر یافت نشد'], 404);
+        }
+
+        if ($user->username === self::SUPPORT_USERNAME) {
+            return response()->json(['message' => 'امکان غیرفعال کردن کاربر پشتیبان وجود ندارد'], 403);
+        }
+
+        $user->update(['is_active' => !$user->is_active]);
+
+        return response()->json([
+            'message' => $user->is_active ? 'کاربر فعال شد' : 'کاربر غیرفعال شد',
+            'data'    => [
+                'is_active' => (bool) $user->is_active,
+            ],
+        ]);
+    }
+
+    /**
      * Get all available roles (for the role assignment dropdown).
      */
     public function roles(): JsonResponse
@@ -284,6 +309,7 @@ class UserController extends Controller
             'mobile'     => $user->mobile,
             'role'       => $user->role,
             'roles'      => $user->getRoleNames()->toArray(),
+            'is_active'  => (bool) $user->is_active,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
         ];
@@ -304,6 +330,7 @@ class UserController extends Controller
             'email'      => $user->email,
             'role'       => $user->role,
             'roles'      => $user->getRoleNames()->toArray(),
+            'is_active'  => (bool) $user->is_active,
             'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,

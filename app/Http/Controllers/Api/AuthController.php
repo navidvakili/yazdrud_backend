@@ -46,6 +46,16 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Check if user is active
+        if (!$user->is_active) {
+            return response()->json([
+                'message' => 'حساب کاربری غیرفعال است',
+                'errors' => [
+                    'username' => ['حساب کاربری شما غیرفعال شده است. لطفاً با مدیر سامانه تماس بگیرید.'],
+                ],
+            ], 403);
+        }
+
         // Check for existing active sessions (concurrent login detection)
         $existingTokens = $user->tokens()->where('name', 'portal-api')->get();
         $currentFingerprint = $request->input('browser_fingerprint');
