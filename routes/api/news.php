@@ -24,8 +24,8 @@ Route::group(['middleware' => 'auth:api'], function () {
     // Like (any authenticated user)
     Route::post('/news/{id}/like', [NewsController::class, 'like']);
 
-    // CRUD (admin/editor/support only)
-    Route::group(['middleware' => 'role_or_permission:admin|editor|support'], function () {
+    // CRUD — users with role admin/editor/support OR news permissions can manage news
+    Route::group(['middleware' => 'role_or_permission:admin|editor|support|news.create|news.edit|news.delete'], function () {
         Route::post('/news', [NewsController::class, 'store']);
         Route::put('/news/{id}', [NewsController::class, 'update']);
         Route::delete('/news/{id}', [NewsController::class, 'destroy']);

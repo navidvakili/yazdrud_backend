@@ -16,8 +16,8 @@ Route::prefix('admin')->middleware('role_or_permission:admin|support|roles.view'
     Route::get('/users/{username}/permissions', [PermissionController::class, 'userPermissions']);
 });
 
-// Write operations — admin/support only
-Route::prefix('admin')->middleware('role_or_permission:admin|support')->group(function () {
+// Write operations — admin/support OR users with edit/delete permissions can manage roles
+Route::prefix('admin')->middleware('role_or_permission:admin|support|roles.edit|roles.delete')->group(function () {
     Route::post('/roles', [PermissionController::class, 'storeRole']);
     Route::put('/roles/{id}', [PermissionController::class, 'updateRole']);
     Route::delete('/roles/{id}', [PermissionController::class, 'destroyRole']);

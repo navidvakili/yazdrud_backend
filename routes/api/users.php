@@ -9,18 +9,16 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('admin')->middleware('role_or_permission:admin|support')->group(function () {
-    // Users CRUD
+// Read-only user endpoints — users with users.view can view but not edit
+Route::prefix('admin')->middleware('role_or_permission:admin|support|users.view')->group(function () {
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/roles', [UserController::class, 'roles']);
-    Route::post('/users', [UserController::class, 'store']);
-
-    // Role assignment (before {username} wildcard)
-    Route::post('/users/assign-role', [UserController::class, 'assignRole']);
-    Route::post('/users/remove-role', [UserController::class, 'removeRole']);
-
-    // User-specific routes (order matters — specific before wildcard)
     Route::get('/users/{username}', [UserController::class, 'show']);
+});
+
+// Write operations — users with create/edit/delete permissions can write
+Route::prefix('admin')->middleware('role_or_permission:admin|support|users.create|users.edit|users.delete')->group(function () {
+    Route::post('/users', [UserController::class, 'store']);
     Route::put('/users/{username}/toggle-active', [UserController::class, 'toggleActive']);
     Route::put('/users/{username}/password', [UserController::class, 'updatePassword']);
     Route::put('/users/{username}', [UserController::class, 'update']);
