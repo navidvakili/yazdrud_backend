@@ -192,11 +192,16 @@ class NavigationController extends Controller
      */
     private function userCanSeeItem(Access $item, string $currentRole, array $userPermissions): bool
     {
-        $permissionName = $this->urlToViewPermission($item->url);
+        $permissionNames = $this->urlToViewPermission($item->url);
 
-        if ($permissionName !== null) {
-            // Spatie mapping exists — use it
-            return in_array($permissionName, $userPermissions, true);
+        if ($permissionNames !== null) {
+            // Spatie mapping exists — check if user has ANY of the required permissions
+            foreach ($permissionNames as $perm) {
+                if (in_array($perm, $userPermissions, true)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // Fallback: legacy role-based check
@@ -211,13 +216,13 @@ class NavigationController extends Controller
      * Spatie permission system. Items without a mapping fall back to
      * the old role-based filter (accesses.roles JSON column).
      */
-    private function urlToViewPermission(string $url): ?string
+    private function urlToViewPermission(string $url): ?array
     {
         $map = [
-            '/users'           => 'users.view',
-            '/sessions'        => 'sessions.view',
-            '/news'            => 'news.view',
-            '/library'         => 'library.view',
+            '/users'           => ['users.view', 'roles.view'],
+            '/sessions'        => ['sessions.view'],
+            '/news'            => ['news.view'],
+            '/library'         => ['library.view'],
         ];
 
         return $map[$url] ?? null;
