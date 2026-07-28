@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\News;
 use App\Models\NewsCategory;
+use App\Models\RoleCategoryPermission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +46,9 @@ class NewsController extends Controller
         if ($request->filled('target_audience')) {
             $query->where('target_audience', $request->input('target_audience'));
         }
+
+        // Filter by category-level permissions (if user has restrictions)
+        $this->applyCategoryRestriction($request, $query, 'news', 'view');
 
         // Pinned first, then sort
         $sortBy = $request->input('sort', 'newest');
@@ -102,6 +106,15 @@ class NewsController extends Controller
             'published_at' => 'nullable|date',
         ]);
 
+        // Validate category access
+        if (isset($validated['category_id']) && $validated['category_id'] !== null) {
+            if (!$this->canAccessCategory($request, 'news', 'create', (int) $validated['category_id'])) {
+                return response()->json([
+                    'message' => 'شما دسترسی ایجاد خبر در این دسته‌بندی را ندارید',
+                ], 403);
+            }
+        }
+
         $user = $request->user();
 
         $news = News::create([
@@ -154,6 +167,17 @@ class NewsController extends Controller
             'attachments' => 'nullable|array',
             'published_at' => 'nullable|date',
         ]);
+
+        // Validate category access if changing category
+        if (array_key_exists('category_id', $validated)) {
+            if ($validated['category_id'] !== null) {
+                if (!$this->canAccessCategory($request, 'news', 'edit', (int) $validated['category_id'])) {
+                    return response()->json([
+                        'message' => 'شما دسترسی ویرایش خبر در این دسته‌بندی را ندارید',
+                    ], 403);
+                }
+            }
+        }
 
         // If status changed to published and no published_at, set it now
         if (isset($validated['status']) && $validated['status'] === 'published' && !$news->published_at) {
@@ -248,11 +272,15 @@ class NewsController extends Controller
     /**
      * List all categories with news count.
      */
-    public function categories(): JsonResponse
+    public function categories(Request $request): JsonResponse
     {
-        $categories = NewsCategory::orderBy('ordering')
-            ->orderBy('name')
-            ->get()
+        $query = NewsCategory::orderBy('ordering')
+            ->orderBy('name');
+
+        // Filter by category-level permissions (if user has restrictions)
+        $this->applyCategoryRestriction($request, $query, 'news', 'view', 'id');
+
+        $categories = $query->get()
             ->map(function ($cat) {
                 return [
                     'id' => $cat->id,
@@ -410,6 +438,78 @@ class NewsController extends Controller
                 'uncategorized_count' => $uncategorizedCount,
             ],
         ]);
+    }
+
+    // ==================== CATEGORY PERMISSION HELPERS ====================
+
+    /**
+     * Apply category-level access restriction to a query builder.
+     *
+     * If the user's roles have category restrictions for the given $categoryType,
+     * the query will be filtered to only include matching categories.
+     * If the user has no restrictions, all items are returned (no filter applied).
+     *
+     * @param  Request      $request
+     * @param  mixed        $query    QueryBuilder instance
+     * @param  string       $categoryType  e.g. 'news'
+     * @param  string       $permission    e.g. 'view', 'create', 'edit'
+     * @param  string       $column   The column name to filter on (e.g. 'category_id' for News, 'id' for NewsCategory)
+     */
+    private function applyCategoryRestriction(Request $request, $query, string $categoryType, string $permission, string $column = 'category_id'): void
+    {
+        $user = $request->user();
+        if (!$user) return;
+
+        // Admin users bypass all category restrictions
+        if ($user->hasRole('admin')) return;
+
+        // Get all role IDs for this user
+        $roleIds = $user->roles()->pluck('spatie_roles.id');
+
+        if ($roleIds->isEmpty()) return;
+
+        // Get category IDs that this user has explicit permission for
+        $allowedCategoryIds = RoleCategoryPermission::whereIn('role_id', $roleIds)
+            ->where('category_type', $categoryType)
+            ->where('permission', $permission)
+            ->pluck('category_id')
+            ->unique()
+            ->values();
+
+        // If the user has ANY category restrictions, apply the filter
+        // If no restrictions at all, show everything (backward compatible)
+        if ($allowedCategoryIds->isNotEmpty()) {
+            $query->whereIn($column, $allowedCategoryIds);
+        }
+    }
+
+    /**
+     * Check if the authenticated user can access a specific category.
+     * Returns true if no restrictions exist, or if the category is in the allowed list.
+     */
+    private function canAccessCategory(Request $request, string $categoryType, string $permission, int $categoryId): bool
+    {
+        $user = $request->user();
+        if (!$user) return false;
+
+        // Admin users bypass all category restrictions
+        if ($user->hasRole('admin')) return true;
+
+        $roleIds = $user->roles()->pluck('spatie_roles.id');
+        if ($roleIds->isEmpty()) return false;
+
+        $restrictedCategories = RoleCategoryPermission::whereIn('role_id', $roleIds)
+            ->where('category_type', $categoryType)
+            ->where('permission', $permission)
+            ->pluck('category_id')
+            ->unique()
+            ->values();
+
+        // If no restrictions, allow
+        if ($restrictedCategories->isEmpty()) return true;
+
+        // Check if the category is in the allowed list
+        return $restrictedCategories->contains($categoryId);
     }
 
     // ==================== FORMATTERS ====================

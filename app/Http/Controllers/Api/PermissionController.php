@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\NewsCategory;
+use App\Models\RoleCategoryPermission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +16,16 @@ use Spatie\Permission\PermissionRegistrar;
 class PermissionController extends Controller
 {
     /**
-     * Get all permissions grouped by module, with Persian labels.
+     * All module types that have category/group structures.
+     * Each entry maps to a model that provides the groups.
+     */
+    private const CATEGORIZABLE_MODULES = [
+        'news' => NewsCategory::class,
+    ];
+
+    /**
+     * Get all permissions grouped by module, with Persian labels
+     * and category/group structures (if any).
      */
     public function index(): JsonResponse
     {
@@ -29,14 +40,24 @@ class PermissionController extends Controller
             ->pluck('label', 'module')
             ->toArray();
 
+        // Fetch categories for modules that have group structures
+        $categories = [];
+        foreach (self::CATEGORIZABLE_MODULES as $module => $modelClass) {
+            $categories[$module] = $modelClass::where('is_active', true)
+                ->orderBy('ordering')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug', 'color']);
+        }
+
         return response()->json([
-            'data'   => $permissions,
-            'labels' => $labels,
+            'data'       => $permissions,
+            'labels'     => $labels,
+            'categories' => $categories,
         ]);
     }
 
     /**
-     * Get all roles with their permissions and user counts.
+     * Get all roles with their permissions, user counts, and category permissions.
      */
     public function roles(): JsonResponse
     {
@@ -51,6 +72,17 @@ class PermissionController extends Controller
                 ->where('model_has_roles.role_id', $role->id)
                 ->where('model_has_roles.model_type', \App\Models\User::class)
                 ->count();
+
+            // Attach category permissions for this role, grouped by category_type
+            $role->category_permissions = RoleCategoryPermission::where('role_id', $role->id)
+                ->get()
+                ->groupBy('category_type')
+                ->map(function ($items, $categoryType) {
+                    return $items->groupBy('category_id')
+                        ->map(function ($perms) {
+                            return $perms->pluck('permission')->toArray();
+                        });
+                });
         });
 
         return response()->json([
@@ -83,7 +115,7 @@ class PermissionController extends Controller
     }
 
     /**
-     * Update a role's permissions.
+     * Update a role's permissions (module-level + category-level).
      */
     public function updateRole(Request $request, string $id): JsonResponse
     {
@@ -92,12 +124,14 @@ class PermissionController extends Controller
         $validator = Validator::make($request->all(), [
             'permissions' => 'required|array',
             'permissions.*' => 'string|exists:permissions,name',
+            'category_permissions' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // ── Sync module-level Spatie permissions ──
         $permissionNames = $request->permissions;
         $permissionIds = Permission::where('guard_name', 'api')
             ->whereIn('name', $permissionNames)
@@ -110,6 +144,33 @@ class PermissionController extends Controller
         // Without this, users logging in after permission changes will see stale data
         // because $user->getAllPermissions() reads from cache, not the database.
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        // ── Sync category-level permissions ──
+        // Expected format: { 'news': { '1': ['view','create'], '2': ['view'] } }
+        if ($request->has('category_permissions')) {
+            // Delete all existing category perms for this role
+            RoleCategoryPermission::where('role_id', $role->id)->delete();
+
+            $records = [];
+            foreach ($request->category_permissions as $categoryType => $categories) {
+                foreach ($categories as $categoryId => $perms) {
+                    foreach ($perms as $permission) {
+                        $records[] = [
+                            'role_id'       => $role->id,
+                            'category_type' => $categoryType,
+                            'category_id'   => (int) $categoryId,
+                            'permission'    => $permission,
+                            'created_at'    => now(),
+                            'updated_at'    => now(),
+                        ];
+                    }
+                }
+            }
+
+            if (!empty($records)) {
+                RoleCategoryPermission::insert($records);
+            }
+        }
 
         return response()->json([
             'message' => 'دسترسی‌های نقش بروزرسانی شد',
