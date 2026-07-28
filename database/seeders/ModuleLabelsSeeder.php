@@ -13,12 +13,9 @@ class ModuleLabelsSeeder extends Seeder
     public function run(): void
     {
         $labels = [
-            ['module' => 'library',    'label' => 'کتابخانه'],
-            ['module' => 'navigation', 'label' => 'ناوبری'],
             ['module' => 'news',       'label' => 'اخبار'],
             ['module' => 'roles',      'label' => 'نقش‌ها'],
             ['module' => 'sessions',   'label' => 'نشست‌ها'],
-            ['module' => 'settings',   'label' => 'تنظیمات'],
             ['module' => 'users',      'label' => 'کاربران'],
         ];
 

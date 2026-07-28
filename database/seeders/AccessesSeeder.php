@@ -81,15 +81,5 @@ class AccessesSeeder extends Seeder
             'active'   => true,
         ]);
 
-        // ── 3. کتابخانه (top-level) ────────────────────────────────
-        Access::create([
-            'parent'   => null,
-            'title'    => 'کتابخانه',
-            'url'      => '/library',
-            'icon'     => 'fa fa-book',
-            'roles'    => ['admin', 'editor', 'support', 'user'],
-            'ordering' => 3,
-            'active'   => true,
-        ]);
     }
 }

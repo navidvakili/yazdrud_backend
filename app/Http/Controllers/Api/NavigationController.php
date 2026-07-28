@@ -222,7 +222,6 @@ class NavigationController extends Controller
             '/users'           => ['users.view', 'roles.view'],
             '/sessions'        => ['sessions.view'],
             '/news'            => ['news.view'],
-            '/library'         => ['library.view'],
         ];
 
         return $map[$url] ?? null;

@@ -28,11 +28,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $modules = [
             'users'        => 'مدیریت کاربران',
             'roles'        => 'مدیریت نقش‌ها',
-            'navigation'   => 'مدیریت منو و دسترسی',
-            'library'      => 'کتابخانه',
             'news'         => 'اخبار',
             'sessions'     => 'مدیریت نشست‌ها',
-            'settings'     => 'تنظیمات سیستم',
         ];
 
         $actions = ['view', 'create', 'edit', 'delete', 'approve'];
@@ -67,10 +64,9 @@ class RolesAndPermissionsSeeder extends Seeder
             ])->get();
             $admin->givePermissionTo($adminPermissions);
 
-            // Editor — can view/edit/approve content but not manage users or settings
+            // Editor — can view/edit/approve content but not manage users
             $editor = Role::firstOrCreate(['name' => 'editor', 'guard_name' => $guard]);
             $editorPermissions = Permission::where('guard_name', $guard)->whereIn('name', [
-                'library.view', 'library.create', 'library.edit',
                 'news.view', 'news.create', 'news.edit', 'news.approve',
             ])->get();
             $editor->givePermissionTo($editorPermissions);
@@ -78,7 +74,6 @@ class RolesAndPermissionsSeeder extends Seeder
             // User — view-only access to most modules
             $userRole = Role::firstOrCreate(['name' => 'user', 'guard_name' => $guard]);
             $userPermissions = Permission::where('guard_name', $guard)->whereIn('name', [
-                'library.view',
                 'news.view',
             ])->get();
             $userRole->givePermissionTo($userPermissions);
