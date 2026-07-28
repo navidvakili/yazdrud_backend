@@ -92,9 +92,9 @@ class NewsController extends Controller
             'summary' => 'nullable|string',
             'content' => 'required|string',
             'category_id' => 'nullable|integer|exists:news_categories,id',
-            'image_url' => 'nullable|string|max:500',
+            'image_url' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
-            'target_audience' => 'required|in:all,students,professors,staff',
+            'target_audience' => 'nullable|in:all,students,professors,staff',
             'is_pinned' => 'boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
@@ -110,12 +110,12 @@ class NewsController extends Controller
             'content' => $validated['content'],
             'category_id' => $validated['category_id'] ?? null,
             'author_username' => $user->username,
-            'author_name' => trim($user->fname . ' ' . $user->lname),
-            'author_role' => $user->role,
+            'author_name' => trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')),
+            'author_role' => $user->role ?? null,
             'image_url' => $validated['image_url'] ?? null,
             'is_pinned' => $validated['is_pinned'] ?? false,
             'status' => $validated['status'],
-            'target_audience' => $validated['target_audience'],
+            'target_audience' => $validated['target_audience'] ?? 'all',
             'tags' => $validated['tags'] ?? [],
             'attachments' => $validated['attachments'] ?? [],
             'published_at' => $validated['status'] === 'published'
@@ -145,9 +145,9 @@ class NewsController extends Controller
             'summary' => 'nullable|string',
             'content' => 'sometimes|required|string',
             'category_id' => 'nullable|integer|exists:news_categories,id',
-            'image_url' => 'nullable|string|max:500',
+            'image_url' => 'nullable|string|max:1000',
             'status' => 'sometimes|required|in:published,draft,archived',
-            'target_audience' => 'sometimes|required|in:all,students,professors,staff',
+            'target_audience' => 'nullable|in:all,students,professors,staff',
             'is_pinned' => 'boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
@@ -280,7 +280,8 @@ class NewsController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
+        $slug = $validated['slug'] ?? Str::slug($validated['name']);
+        $validated['slug'] = $slug !== '' ? $slug : ('cat-' . Str::lower(Str::random(8)));
 
         $category = NewsCategory::create($validated);
 
@@ -373,6 +374,11 @@ class NewsController extends Controller
             ->limit(10)
             ->get(['id', 'title', 'category_id', 'views_count', 'likes_count']);
 
+        // Top 10 most liked
+        $topLiked = News::orderBy('likes_count', 'desc')
+            ->limit(10)
+            ->get(['id', 'title', 'category_id', 'views_count', 'likes_count']);
+
         // Category distribution
         $categories = NewsCategory::get(['id', 'name', 'color']);
         $categoryDistribution = $categories->map(function ($cat) use ($totalNews) {
@@ -399,6 +405,7 @@ class NewsController extends Controller
                 'total_views' => $totalViews,
                 'total_likes' => $totalLikes,
                 'top_viewed' => $topViewed,
+                'top_liked' => $topLiked,
                 'category_distribution' => $categoryDistribution,
                 'uncategorized_count' => $uncategorizedCount,
             ],
@@ -413,14 +420,14 @@ class NewsController extends Controller
             'id' => $news->id,
             'title' => $news->title,
             'summary' => $news->summary,
-            'category_id' => $news->category_id,
+            'category_id' => $news->category_id !== null ? (int) $news->category_id : null,
             'category_name' => $news->category?->name,
             'category_color' => $news->category?->color,
             'author_username' => $news->author_username,
             'author_name' => $news->author_name,
             'image_url' => $news->image_url,
-            'views_count' => $news->views_count,
-            'likes_count' => $news->likes_count,
+            'views_count' => (int) ($news->views_count ?? 0),
+            'likes_count' => (int) ($news->likes_count ?? 0),
             'is_pinned' => $news->is_pinned,
             'status' => $news->status,
             'target_audience' => $news->target_audience,

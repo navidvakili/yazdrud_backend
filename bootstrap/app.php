@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\QueryException;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -39,6 +40,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // Return proper validation error payloads for API clients
+        $exceptions->render(function (ValidationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => collect($e->errors())->flatten()->first() ?: 'داده‌های ارسالی نامعتبر است.',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+        });
 
         // Catch database / SQL errors and return a friendly message instead of exposing SQL details
         $exceptions->render(function (QueryException $e, Request $request) {
