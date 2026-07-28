@@ -32,6 +32,11 @@ Route::post('/session-warnings', [\App\Http\Controllers\Api\SessionWarningContro
 Route::get('/session-warnings/{id}/status', [\App\Http\Controllers\Api\SessionWarningController::class, 'status']);
 Route::post('/session-warnings/login', [\App\Http\Controllers\Api\SessionWarningController::class, 'login']);
 
+// ==================== Public News Routes (no auth required) ====================
+Route::get('/news', [\App\Http\Controllers\Api\NewsController::class, 'index']);
+Route::get('/news/{id}', [\App\Http\Controllers\Api\NewsController::class, 'show']);
+Route::post('/news/{id}/views', [\App\Http\Controllers\Api\NewsController::class, 'incrementViews']);
+
 // ==================== Authenticated Routes ====================
 Route::group(['middleware' => 'auth:api'], function () {
     foreach (glob(__DIR__ . '/api/*.php') as $file_name) {

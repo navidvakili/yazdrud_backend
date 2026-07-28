@@ -5,19 +5,12 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| News Routes
+| Authenticated News Routes
 |--------------------------------------------------------------------------
 |
-| Public routes: list & show published news
-| Authenticated: create, update, delete, pin, like
-| Admin: categories management, analytics
+| Like, CRUD, pin, categories, analytics
 |
 */
-
-// ==================== Public News Routes ====================
-Route::get('/news', [NewsController::class, 'index']);
-Route::get('/news/{id}', [NewsController::class, 'show']);
-Route::post('/news/{id}/views', [NewsController::class, 'incrementViews']);
 
 // ==================== Authenticated News Routes ====================
 Route::group(['middleware' => 'auth:api'], function () {
