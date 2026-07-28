@@ -20,7 +20,7 @@ class NewsController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = News::query()->with('category');
+        $query = News::query()->with('category')->withCount('approvedComments');
 
         // Search by title, summary, tags
         if ($request->filled('search')) {
@@ -78,7 +78,7 @@ class NewsController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $news = News::with('category')->find($id);
+        $news = News::with('category')->with('approvedComments')->withCount('approvedComments')->find($id);
 
         if (!$news) {
             return response()->json(['message' => 'خبر یافت نشد'], 404);
@@ -108,6 +108,7 @@ class NewsController extends Controller
             'status' => 'required|in:published,draft,archived',
             'target_audience' => 'nullable|in:all,students,professors,staff',
             'is_pinned' => 'boolean',
+            'comments_enabled' => 'boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
             'attachments' => 'nullable|array',
@@ -138,6 +139,7 @@ class NewsController extends Controller
             'author_role' => $user->role ?? null,
             'image_url' => $validated['image_url'] ?? null,
             'is_pinned' => $validated['is_pinned'] ?? false,
+            'comments_enabled' => $validated['comments_enabled'] ?? true,
             'status' => $validated['status'],
             'target_audience' => $validated['target_audience'] ?? 'all',
             'tags' => $validated['tags'] ?? [],
@@ -173,6 +175,7 @@ class NewsController extends Controller
             'status' => 'sometimes|required|in:published,draft,archived',
             'target_audience' => 'nullable|in:all,students,professors,staff',
             'is_pinned' => 'boolean',
+            'comments_enabled' => 'boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
             'attachments' => 'nullable|array',
@@ -547,6 +550,8 @@ class NewsController extends Controller
             'views_count' => (int) ($news->views_count ?? 0),
             'likes_count' => (int) ($news->likes_count ?? 0),
             'is_pinned' => $news->is_pinned,
+            'comments_enabled' => $news->comments_enabled ?? false,
+            'comments_count' => (int) ($news->approved_comments_count ?? 0),
             'status' => $news->status,
             'target_audience' => $news->target_audience,
             'tags' => $news->tags ?? [],
@@ -558,9 +563,21 @@ class NewsController extends Controller
 
     private function formatNewsDetailed(News $news): array
     {
-        return $this->formatNews($news) + [
+        $base = $this->formatNews($news) + [
             'content' => $news->content,
             'attachments' => $news->attachments ?? [],
         ];
+
+        // Include approved comments if the relation is loaded
+        if ($news->relationLoaded('approvedComments')) {
+            $base['comments'] = $news->approvedComments->map(fn($c) => [
+                'id' => $c->id,
+                'author_name' => $c->author_name,
+                'content' => $c->content,
+                'created_at' => $c->created_at?->toISOString(),
+            ])->toArray();
+        }
+
+        return $base;
     }
 }

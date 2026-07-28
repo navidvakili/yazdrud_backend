@@ -38,4 +38,11 @@ Route::group(['middleware' => 'auth:api'], function () {
     // Analytics (admin/support only)
     Route::get('/news-analytics', [NewsController::class, 'analytics'])
         ->middleware('role_or_permission:admin|support');
+
+    // ==================== News Comments (admin/support) ====================
+    Route::group(['middleware' => 'role_or_permission:admin|support'], function () {
+        Route::get('/news-comments', [\App\Http\Controllers\Api\NewsCommentController::class, 'adminIndex']);
+        Route::put('/news-comments/{id}/approve', [\App\Http\Controllers\Api\NewsCommentController::class, 'approve']);
+        Route::delete('/news-comments/{id}', [\App\Http\Controllers\Api\NewsCommentController::class, 'destroy']);
+    });
 });

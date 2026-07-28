@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\NewsCommentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +37,8 @@ Route::post('/session-warnings/login', [\App\Http\Controllers\Api\SessionWarning
 Route::get('/news', [\App\Http\Controllers\Api\NewsController::class, 'index']);
 Route::get('/news/{id}', [\App\Http\Controllers\Api\NewsController::class, 'show']);
 Route::post('/news/{id}/views', [\App\Http\Controllers\Api\NewsController::class, 'incrementViews']);
+Route::get('/news/{id}/comments', [\App\Http\Controllers\Api\NewsCommentController::class, 'index']);
+Route::post('/news/{id}/comments', [\App\Http\Controllers\Api\NewsCommentController::class, 'store']);
 
 // ==================== Authenticated Routes ====================
 Route::group(['middleware' => 'auth:api'], function () {
