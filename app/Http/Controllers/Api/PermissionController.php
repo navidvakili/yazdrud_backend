@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionController extends Controller
 {
@@ -96,6 +97,12 @@ class PermissionController extends Controller
             ->pluck('id');
 
         $role->syncPermissions($permissionIds);
+
+        // 🧠 CRITICAL: Spatie caches permissions for 24 hours. syncPermissions() on
+        // the Role model (HasPermissions trait) does NOT clear the cache automatically.
+        // Without this, users logging in after permission changes will see stale data
+        // because $user->getAllPermissions() reads from cache, not the database.
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return response()->json([
             'message' => 'دسترسی‌های نقش بروزرسانی شد',
