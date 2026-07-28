@@ -103,7 +103,7 @@ class NewsController extends Controller
             'title' => 'required|string|max:300',
             'summary' => 'nullable|string',
             'content' => 'required|string',
-            'category_id' => 'nullable|integer|exists:news_categories,id',
+            'category_id' => 'required|integer|exists:news_categories,id',
             'image_url' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
             'target_audience' => 'nullable|in:all,students,professors,staff',
@@ -115,12 +115,10 @@ class NewsController extends Controller
         ]);
 
         // Validate category access
-        if (isset($validated['category_id']) && $validated['category_id'] !== null) {
-            if (!$this->canAccessCategory($request, 'news', 'create', (int) $validated['category_id'])) {
-                return response()->json([
-                    'message' => 'شما دسترسی ایجاد خبر در این دسته‌بندی را ندارید',
-                ], 403);
-            }
+        if (!$this->canAccessCategory($request, 'news', 'create', (int) $validated['category_id'])) {
+            return response()->json([
+                'message' => 'شما دسترسی ایجاد خبر در این دسته‌بندی را ندارید',
+            ], 403);
         }
 
         $user = $request->user();
@@ -170,7 +168,7 @@ class NewsController extends Controller
             'title' => 'sometimes|required|string|max:300',
             'summary' => 'nullable|string',
             'content' => 'sometimes|required|string',
-            'category_id' => 'nullable|integer|exists:news_categories,id',
+            'category_id' => 'sometimes|required|integer|exists:news_categories,id',
             'image_url' => 'nullable|string|max:1000',
             'status' => 'sometimes|required|in:published,draft,archived',
             'target_audience' => 'nullable|in:all,students,professors,staff',
