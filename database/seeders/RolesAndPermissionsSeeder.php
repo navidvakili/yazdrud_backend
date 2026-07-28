@@ -31,10 +31,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'navigation'   => 'مدیریت منو و دسترسی',
             'library'      => 'کتابخانه',
             'news'         => 'اخبار',
-            'services'     => 'خدمات',
-            'urban'        => ' شهری و عمرانی',
-            'roads'        => 'roads transportation',
-            'land'         => 'land allocation',
             'sessions'     => 'مدیریت نشست‌ها',
             'settings'     => 'تنظیمات سیستم',
         ];
@@ -76,10 +72,6 @@ class RolesAndPermissionsSeeder extends Seeder
             $editorPermissions = Permission::where('guard_name', $guard)->whereIn('name', [
                 'library.view', 'library.create', 'library.edit',
                 'news.view', 'news.create', 'news.edit', 'news.approve',
-                'services.view', 'services.create', 'services.edit',
-                'urban.view', 'urban.create', 'urban.edit',
-                'roads.view', 'roads.create', 'roads.edit',
-                'land.view', 'land.create', 'land.edit',
             ])->get();
             $editor->givePermissionTo($editorPermissions);
 
@@ -88,10 +80,6 @@ class RolesAndPermissionsSeeder extends Seeder
             $userPermissions = Permission::where('guard_name', $guard)->whereIn('name', [
                 'library.view',
                 'news.view',
-                'services.view',
-                'urban.view',
-                'roads.view',
-                'land.view',
             ])->get();
             $userRole->givePermissionTo($userPermissions);
         }

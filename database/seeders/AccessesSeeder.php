@@ -81,65 +81,14 @@ class AccessesSeeder extends Seeder
             'active'   => true,
         ]);
 
-        // ── 3. خدمات الکترونیکی (top-level) ────────────────────────
-        $serviceCat = Access::create([
-            'parent'   => null,
-            'title'    => 'خدمات الکترونیکی',
-            'url'      => '#',
-            'icon'     => 'fa fa-globe',
-            'roles'    => ['admin', 'editor', 'support'],
-            'ordering' => 3,
-            'active'   => true,
-        ]);
-
-        Access::create([
-            'parent'   => $serviceCat->id,
-            'title'    => 'خدمات شهری',
-            'url'      => '/services',
-            'icon'     => 'fa fa-briefcase',
-            'roles'    => ['admin', 'editor', 'support'],
-            'ordering' => 1,
-            'active'   => true,
-        ]);
-
-        Access::create([
-            'parent'   => $serviceCat->id,
-            'title'    => 'برنامه‌ریزی شهری',
-            'url'      => '/urban-planning',
-            'icon'     => 'fa fa-building',
-            'roles'    => ['admin', 'editor', 'support'],
-            'ordering' => 2,
-            'active'   => true,
-        ]);
-
-        Access::create([
-            'parent'   => $serviceCat->id,
-            'title'    => 'جاده و ترابری',
-            'url'      => '/roads-transport',
-            'icon'     => 'fa fa-road',
-            'roles'    => ['admin', 'editor', 'support'],
-            'ordering' => 3,
-            'active'   => true,
-        ]);
-
-        Access::create([
-            'parent'   => $serviceCat->id,
-            'title'    => 'تخصیص زمین',
-            'url'      => '/land-allocation',
-            'icon'     => 'fa fa-map',
-            'roles'    => ['admin', 'editor', 'support'],
-            'ordering' => 4,
-            'active'   => true,
-        ]);
-
-        // ── 4. کتابخانه (top-level) ────────────────────────────────
+        // ── 3. کتابخانه (top-level) ────────────────────────────────
         Access::create([
             'parent'   => null,
             'title'    => 'کتابخانه',
             'url'      => '/library',
             'icon'     => 'fa fa-book',
             'roles'    => ['admin', 'editor', 'support', 'user'],
-            'ordering' => 4,
+            'ordering' => 3,
             'active'   => true,
         ]);
     }

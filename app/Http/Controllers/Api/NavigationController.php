@@ -217,10 +217,6 @@ class NavigationController extends Controller
             '/users'           => 'users.view',
             '/sessions'        => 'sessions.view',
             '/news'            => 'news.view',
-            '/services'        => 'services.view',
-            '/urban-planning'  => 'urban.view',
-            '/roads-transport' => 'roads.view',
-            '/land-allocation' => 'land.view',
             '/library'         => 'library.view',
         ];
 
