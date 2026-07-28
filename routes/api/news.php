@@ -32,9 +32,11 @@ Route::group(['middleware' => 'auth:api'], function () {
         Route::put('/news/{id}/toggle-pin', [NewsController::class, 'togglePin']);
     });
 
-    // Categories (admin/support only)
+    // Categories list (any authenticated user — needed for filters)
+    Route::get('/news-categories', [NewsController::class, 'categories']);
+
+    // Categories management (admin/support only)
     Route::group(['middleware' => 'role_or_permission:admin|support'], function () {
-        Route::get('/news-categories', [NewsController::class, 'categories']);
         Route::post('/news-categories', [NewsController::class, 'storeCategory']);
         Route::put('/news-categories/{id}', [NewsController::class, 'updateCategory']);
         Route::delete('/news-categories/{id}', [NewsController::class, 'destroyCategory']);
