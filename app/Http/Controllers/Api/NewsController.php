@@ -40,6 +40,9 @@ class NewsController extends Controller
         // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
+        } elseif (!$request->user()) {
+            // Public/unauthenticated requests: only show published news
+            $query->where('status', 'published');
         }
 
         // Filter by target_audience
@@ -73,11 +76,16 @@ class NewsController extends Controller
     /**
      * Get a single news article with full details.
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $news = News::with('category')->find($id);
 
         if (!$news) {
+            return response()->json(['message' => 'خبر یافت نشد'], 404);
+        }
+
+        // Public users cannot view non-published news
+        if (!$request->user() && $news->status !== 'published') {
             return response()->json(['message' => 'خبر یافت نشد'], 404);
         }
 
@@ -116,6 +124,11 @@ class NewsController extends Controller
         }
 
         $user = $request->user();
+
+        // If user does NOT have approve permission, force status to draft
+        if (!$user->can('news.approve') && $validated['status'] === 'published') {
+            $validated['status'] = 'draft';
+        }
 
         $news = News::create([
             'title' => $validated['title'],
@@ -182,6 +195,13 @@ class NewsController extends Controller
         // If status changed to published and no published_at, set it now
         if (isset($validated['status']) && $validated['status'] === 'published' && !$news->published_at) {
             $validated['published_at'] = $validated['published_at'] ?? now();
+        }
+
+        // If user does NOT have approve permission, prevent publishing
+        if (isset($validated['status']) && $validated['status'] === 'published') {
+            if (!$request->user()->can('news.approve')) {
+                $validated['status'] = 'draft';
+            }
         }
 
         $news->update($validated);
