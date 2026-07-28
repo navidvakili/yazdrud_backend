@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -13,7 +14,7 @@ use Spatie\Permission\PermissionRegistrar;
 class PermissionController extends Controller
 {
     /**
-     * Get all permissions grouped by module.
+     * Get all permissions grouped by module, with Persian labels.
      */
     public function index(): JsonResponse
     {
@@ -23,8 +24,14 @@ class PermissionController extends Controller
                 return explode('.', $p->name)[0];
             });
 
+        // Fetch module labels from the database
+        $labels = DB::table('module_labels')
+            ->pluck('label', 'module')
+            ->toArray();
+
         return response()->json([
-            'data' => $permissions,
+            'data'   => $permissions,
+            'labels' => $labels,
         ]);
     }
 
