@@ -81,5 +81,26 @@ class AccessesSeeder extends Seeder
             'active'   => true,
         ]);
 
+        // ── 3. نقشه پروژه‌های عمرانی (top-level) ────────────────────
+        $countyProjectsCat = Access::create([
+            'parent'   => null,
+            'title'    => 'نقشه پروژه‌های عمرانی',
+            'url'      => '#',
+            'icon'     => 'fa fa-map',
+            'roles'    => ['admin', 'support'],
+            'ordering' => 3,
+            'active'   => true,
+        ]);
+
+        Access::create([
+            'parent'   => $countyProjectsCat->id,
+            'title'    => 'مدیریت شهرستان‌ها',
+            'url'      => '/county-projects',
+            'icon'     => 'fa fa-layers',
+            'roles'    => ['admin', 'support'],
+            'ordering' => 1,
+            'active'   => true,
+        ]);
+
     }
 }

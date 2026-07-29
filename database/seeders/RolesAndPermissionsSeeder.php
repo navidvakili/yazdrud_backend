@@ -26,10 +26,11 @@ class RolesAndPermissionsSeeder extends Seeder
         | Each module gets view/create/edit/delete/approve permissions.
         */
         $modules = [
-            'users'        => 'مدیریت کاربران',
-            'roles'        => 'مدیریت نقش‌ها',
-            'news'         => 'اخبار',
-            'sessions'     => 'مدیریت نشست‌ها',
+            'users'           => 'مدیریت کاربران',
+            'roles'           => 'مدیریت نقش‌ها',
+            'news'            => 'اخبار',
+            'sessions'        => 'مدیریت نشست‌ها',
+            'county-projects' => 'نقشه پروژه‌های عمرانی',
         ];
 
         $actions = ['view', 'create', 'edit', 'delete', 'approve'];
@@ -61,6 +62,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'users.view', 'users.create', 'users.edit', 'users.delete',
                 'sessions.view', 'sessions.create', 'sessions.edit', 'sessions.delete',
                 'news.view', 'news.create', 'news.edit', 'news.delete', 'news.approve',
+                'county-projects.view', 'county-projects.edit',
             ])->get();
             $admin->givePermissionTo($adminPermissions);
 

@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             AdminUserSeeder::class,
             AccessesSeeder::class,
+            CountyProjectSeeder::class,
         ]);
     }
 }
