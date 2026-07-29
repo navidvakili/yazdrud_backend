@@ -18,6 +18,7 @@ class ModuleLabelsSeeder extends Seeder
             ['module' => 'sessions',        'label' => 'نشست‌ها'],
             ['module' => 'users',           'label' => 'کاربران'],
             ['module' => 'county-projects', 'label' => 'نقشه پروژه‌های عمرانی'],
+            ['module' => 'hero-slides',     'label' => 'اسلایدر صفحه اصلی'],
         ];
 
         // Upsert: update label if module exists, insert if not

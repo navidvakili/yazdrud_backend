@@ -223,6 +223,7 @@ class NavigationController extends Controller
             '/sessions'        => ['sessions.view'],
             '/news'            => ['news.view'],
             '/county-projects' => ['county-projects.view'],
+            '/hero-slides'     => ['hero-slides.view'],
         ];
 
         return $map[$url] ?? null;

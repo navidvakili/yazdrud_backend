@@ -44,6 +44,9 @@ Route::post('/news/{id}/comments', [\App\Http\Controllers\Api\NewsCommentControl
 Route::get('/county-projects', [\App\Http\Controllers\Api\CountyProjectController::class, 'index']);
 Route::get('/county-projects/{countyId}', [\App\Http\Controllers\Api\CountyProjectController::class, 'show']);
 
+// ==================== Public Hero Slides Routes (no auth required) ====================
+Route::get('/hero-slides', [\App\Http\Controllers\Api\HeroSlideController::class, 'index']);
+
 // ==================== Authenticated Routes ====================
 Route::group(['middleware' => 'auth:api'], function () {
     foreach (glob(__DIR__ . '/api/*.php') as $file_name) {

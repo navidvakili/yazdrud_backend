@@ -81,6 +81,16 @@ class AccessesSeeder extends Seeder
             'active'   => true,
         ]);
 
+        Access::create([
+            'parent'   => $newsCat->id,
+            'title'    => 'مدیریت اسلایدر',
+            'url'      => '/hero-slides',
+            'icon'     => 'fa fa-image',
+            'roles'    => ['admin', 'support'],
+            'ordering' => 3,
+            'active'   => true,
+        ]);
+
         // ── 3. نقشه پروژه‌های عمرانی (top-level) ────────────────────
         $countyProjectsCat = Access::create([
             'parent'   => null,

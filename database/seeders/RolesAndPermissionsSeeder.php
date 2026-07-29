@@ -31,6 +31,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'news'            => 'اخبار',
             'sessions'        => 'مدیریت نشست‌ها',
             'county-projects' => 'نقشه پروژه‌های عمرانی',
+            'hero-slides'     => 'اسلایدر صفحه اصلی',
         ];
 
         $actions = ['view', 'create', 'edit', 'delete', 'approve'];
