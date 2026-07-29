@@ -13,10 +13,11 @@ class ModuleLabelsSeeder extends Seeder
     public function run(): void
     {
         $labels = [
-            ['module' => 'news',       'label' => 'اخبار'],
-            ['module' => 'roles',      'label' => 'نقش‌ها'],
-            ['module' => 'sessions',   'label' => 'نشست‌ها'],
-            ['module' => 'users',      'label' => 'کاربران'],
+            ['module' => 'news',            'label' => 'اخبار'],
+            ['module' => 'roles',           'label' => 'نقش‌ها'],
+            ['module' => 'sessions',        'label' => 'نشست‌ها'],
+            ['module' => 'users',           'label' => 'کاربران'],
+            ['module' => 'county-projects', 'label' => 'نقشه پروژه‌های عمرانی'],
         ];
 
         // Upsert: update label if module exists, insert if not
