@@ -12,6 +12,5 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::post('/media/upload', [MediaController::class, 'upload']);
 Route::get('/media', [MediaController::class, 'index']);
 Route::delete('/media/{id}', [MediaController::class, 'destroy']);

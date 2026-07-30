@@ -50,6 +50,9 @@ Route::get('/hero-slides', [\App\Http\Controllers\Api\HeroSlideController::class
 // ==================== Public Slider Studio Routes (no auth required) ====================
 Route::get('/slider-studio/public', [\App\Http\Controllers\Api\SliderProjectController::class, 'publicIndex']);
 
+// ==================== Media Upload (outside auth:api to avoid Passport PSR-7 file upload bug) ====================
+Route::post('/media/upload', [\App\Http\Controllers\Api\MediaController::class, 'upload']);
+
 // ==================== Authenticated Routes ====================
 Route::group(['middleware' => 'auth:api'], function () {
     foreach (glob(__DIR__ . '/api/*.php') as $file_name) {

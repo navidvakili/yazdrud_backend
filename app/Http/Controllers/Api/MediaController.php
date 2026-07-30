@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -15,8 +17,15 @@ class MediaController extends Controller
      */
     public function upload(Request $request): JsonResponse
     {
+        // Authenticate without triggering Passport's PSR-7 conversion (which breaks with file uploads)
+        $user = $this->authenticateViaBearerToken($request);
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+        Auth::setUser($user);
+
         $request->validate([
-            'file' => 'required|file|max:10240|mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx',
+            'file' => 'required|file|max:102400|mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,mp4,webm,mov,avi,mkv,flv',
         ]);
 
         $file = $request->file('file');
@@ -79,11 +88,64 @@ class MediaController extends Controller
         return response()->json(['message' => 'فایل با موفقیت حذف شد.']);
     }
 
+    /**
+     * احراز هویت از طریق Bearer Token (بدون PSR-7 که با آپلود فایل مشکل دارد)
+     */
+    private function authenticateViaBearerToken(Request $request): ?User
+    {
+        // 1. Try standard Passport auth first
+        try {
+            $user = Auth::guard('api')->user();
+            if ($user) {
+                return $user;
+            }
+        } catch (\Exception $e) {
+            // PSR-7 conversion error — fall through to manual check
+        }
+
+        // 2. Fallback: manually decode JWT to avoid Passport's PSR-7 conversion
+        $bearerToken = $request->bearerToken();
+        if (!$bearerToken) {
+            return null;
+        }
+
+        try {
+            // Decode JWT payload (second base64 segment)
+            $parts = explode('.', $bearerToken);
+            if (count($parts) < 2) {
+                return null;
+            }
+            $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/'), true));
+            if (!$payload || empty($payload->jti)) {
+                return null;
+            }
+
+            $token = \Laravel\Passport\Token::find($payload->jti);
+            if (!$token || $token->revoked || $token->expires_at?->isPast()) {
+                return null;
+            }
+
+            $user = User::find($token->user_id);
+            if ($user) {
+                Auth::setUser($user->withAccessToken($token));
+                return $user;
+            }
+        } catch (\Exception $e) {
+            // Silent fallthrough
+        }
+
+        return null;
+    }
+
     private function formatFile(string $path, ?string $originalName = null): array
     {
         $url = Storage::disk('public')->url($path);
-        $mime = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';
-        $size = Storage::disk('public')->size($path);
+        $mime = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';        // Fallback for video mime types that storage may misdetect
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $videoMimes = ['mp4' => 'video/mp4', 'webm' => 'video/webm', 'mov' => 'video/quicktime', 'avi' => 'video/x-msvideo', 'mkv' => 'video/x-matroska', 'flv' => 'video/x-flv'];
+        if (isset($videoMimes[$ext])) {
+            $mime = $videoMimes[$ext];
+        }        $size = Storage::disk('public')->size($path);
         $lastModified = Storage::disk('public')->lastModified($path);
 
         return [
