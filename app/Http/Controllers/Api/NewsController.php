@@ -63,7 +63,7 @@ class NewsController extends Controller
             default => $query->orderBy('id', 'desc'),
         };
 
-        $perPage = min((int) $request->input('per_page', 15), 50);
+        $perPage = min((int) $request->input('per_page', 15), 500);
         $news = $query->paginate($perPage);
 
         $news->getCollection()->transform(function ($item) {
