@@ -47,6 +47,9 @@ Route::get('/county-projects/{countyId}', [\App\Http\Controllers\Api\CountyProje
 // ==================== Public Hero Slides Routes (no auth required) ====================
 Route::get('/hero-slides', [\App\Http\Controllers\Api\HeroSlideController::class, 'index']);
 
+// ==================== Public Slider Studio Routes (no auth required) ====================
+Route::get('/slider-studio/public', [\App\Http\Controllers\Api\SliderProjectController::class, 'publicIndex']);
+
 // ==================== Authenticated Routes ====================
 Route::group(['middleware' => 'auth:api'], function () {
     foreach (glob(__DIR__ . '/api/*.php') as $file_name) {
