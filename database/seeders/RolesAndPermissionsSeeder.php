@@ -32,6 +32,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'sessions'        => 'مدیریت نشست‌ها',
             'county-projects' => 'نقشه پروژه‌های عمرانی',
             'hero-slides'     => 'اسلایدر صفحه اصلی',
+            'slider-studio'   => 'اسلایدر هوشمند',
         ];
 
         $actions = ['view', 'create', 'edit', 'delete', 'approve'];
@@ -64,6 +65,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'sessions.view', 'sessions.create', 'sessions.edit', 'sessions.delete',
                 'news.view', 'news.create', 'news.edit', 'news.delete', 'news.approve',
                 'hero-slides.view', 'hero-slides.create', 'hero-slides.edit', 'hero-slides.delete',
+                'slider-studio.view', 'slider-studio.edit',
                 'county-projects.view', 'county-projects.edit',
             ])->get();
             $admin->givePermissionTo($adminPermissions);
