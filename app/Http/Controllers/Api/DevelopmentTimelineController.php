@@ -55,19 +55,14 @@ class DevelopmentTimelineController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'year'        => 'required|string|max:50',
             'icon'        => 'nullable|string|max:100',
-            'image_url'   => 'nullable|string|max:500',
-            'type'        => 'nullable|string|in:road,urban,both',
+            'value'       => 'nullable|string|max:255',
+            'value_index' => 'nullable|string|max:255',
             'sort_order'  => 'nullable|integer|min:0',
             'is_active'   => 'nullable|boolean',
         ], [
             'title.required'   => 'عنوان الزامی است.',
             'title.max'        => 'عنوان حداکثر ۲۵۵ کاراکتر می‌تواند باشد.',
-            'year.required'    => 'سال یا بازه زمانی الزامی است.',
-            'year.max'         => 'سال یا بازه زمانی حداکثر ۵۰ کاراکتر می‌تواند باشد.',
-            'type.in'          => 'نوع باید یکی از مقادیر road, urban, both باشد.',
         ]);
 
         if ($validator->fails()) {
@@ -130,19 +125,14 @@ class DevelopmentTimelineController extends Controller
 
         $validator = Validator::make($request->all(), [
             'title'       => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'year'        => 'sometimes|required|string|max:50',
             'icon'        => 'nullable|string|max:100',
-            'image_url'   => 'nullable|string|max:500',
-            'type'        => 'nullable|string|in:road,urban,both',
+            'value'       => 'nullable|string|max:255',
+            'value_index' => 'nullable|string|max:255',
             'sort_order'  => 'nullable|integer|min:0',
             'is_active'   => 'nullable|boolean',
         ], [
             'title.required'   => 'عنوان الزامی است.',
             'title.max'        => 'عنوان حداکثر ۲۵۵ کاراکتر می‌تواند باشد.',
-            'year.required'    => 'سال یا بازه زمانی الزامی است.',
-            'year.max'         => 'سال یا بازه زمانی حداکثر ۵۰ کاراکتر می‌تواند باشد.',
-            'type.in'          => 'نوع باید یکی از مقادیر road, urban, both باشد.',
         ]);
 
         if ($validator->fails()) {

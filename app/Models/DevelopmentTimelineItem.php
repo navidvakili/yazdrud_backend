@@ -8,11 +8,9 @@ class DevelopmentTimelineItem extends Model
 {
     protected $fillable = [
         'title',
-        'description',
-        'year',
         'icon',
-        'image_url',
-        'type',
+        'value',
+        'value_index',
         'sort_order',
         'is_active',
     ];
