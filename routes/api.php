@@ -44,9 +44,6 @@ Route::post('/news/{id}/comments', [\App\Http\Controllers\Api\NewsCommentControl
 Route::get('/county-projects', [\App\Http\Controllers\Api\CountyProjectController::class, 'index']);
 Route::get('/county-projects/{countyId}', [\App\Http\Controllers\Api\CountyProjectController::class, 'show']);
 
-// ==================== Public Hero Slides Routes (no auth required) ====================
-Route::get('/hero-slides', [\App\Http\Controllers\Api\HeroSlideController::class, 'index']);
-
 // ==================== Public Slider Studio Routes (no auth required) ====================
 Route::get('/slider-studio/public', [\App\Http\Controllers\Api\SliderProjectController::class, 'publicIndex']);
 

@@ -81,18 +81,7 @@ class AccessesSeeder extends Seeder
             'active'   => true,
         ]);
 
-        // ── 3. مدیریت اسلایدر (top-level) ───────────────────────────
-        Access::create([
-            'parent'   => null,
-            'title'    => 'مدیریت اسلایدر',
-            'url'      => '/hero-slides',
-            'icon'     => 'fa fa-image',
-            'roles'    => ['admin', 'support'],
-            'ordering' => 3,
-            'active'   => true,
-        ]);
-
-        // ── 4. اسلایدر هوشمند (top-level) ──────────────────────────
+        // ── 3. اسلایدر هوشمند (top-level) ──────────────────────────
         Access::create([
             'parent'   => null,
             'title'    => 'اسلایدر هوشمند',
