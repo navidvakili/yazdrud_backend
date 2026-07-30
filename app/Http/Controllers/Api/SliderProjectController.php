@@ -353,6 +353,42 @@ class SliderProjectController extends Controller
     }
 
     /**
+     * Admin: Get the current (single) slider project.
+     * If none exists, creates a default empty one automatically.
+     */
+    public function current(): JsonResponse
+    {
+        $project = SliderProject::active()->orderBy('sort_order')->first();
+
+        if (!$project) {
+            $project = SliderProject::create([
+                'title' => 'اسلایدهای وب‌سایت',
+                'description' => 'اسلایدر اصلی وب‌سایت',
+                'project_data' => [
+                    'id' => 'default',
+                    'title' => 'اسلایدهای وب‌سایت',
+                    'description' => 'اسلایدر اصلی وب‌سایت',
+                    'width' => 1240,
+                    'height' => 720,
+                    'autoPlay' => true,
+                    'loop' => true,
+                    'scrollSnap' => false,
+                    'addonParticles' => false,
+                    'addonWave' => false,
+                    'addonTextMorph' => false,
+                    'slides' => [],
+                ],
+                'is_active' => true,
+                'sort_order' => 0,
+            ]);
+        }
+
+        return response()->json([
+            'data' => $project,
+        ]);
+    }
+
+    /**
      * Admin: List all slider projects with pagination.
      */
     public function index(Request $request): JsonResponse
