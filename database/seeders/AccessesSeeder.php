@@ -81,8 +81,9 @@ class AccessesSeeder extends Seeder
             'active'   => true,
         ]);
 
+        // ── 3. مدیریت اسلایدر (top-level) ───────────────────────────
         Access::create([
-            'parent'   => $newsCat->id,
+            'parent'   => null,
             'title'    => 'مدیریت اسلایدر',
             'url'      => '/hero-slides',
             'icon'     => 'fa fa-image',
@@ -91,8 +92,9 @@ class AccessesSeeder extends Seeder
             'active'   => true,
         ]);
 
+        // ── 4. اسلایدر هوشمند (top-level) ──────────────────────────
         Access::create([
-            'parent'   => $newsCat->id,
+            'parent'   => null,
             'title'    => 'اسلایدر هوشمند',
             'url'      => '/slider-studio',
             'icon'     => 'fa fa-layers',
@@ -101,14 +103,14 @@ class AccessesSeeder extends Seeder
             'active'   => true,
         ]);
 
-        // ── 3. نقشه پروژه‌های عمرانی (top-level) ────────────────────
+        // ── 5. نقشه پروژه‌های عمرانی (top-level) ────────────────────
         $countyProjectsCat = Access::create([
             'parent'   => null,
             'title'    => 'نقشه پروژه‌های عمرانی',
             'url'      => '#',
             'icon'     => 'fa fa-map',
             'roles'    => ['admin', 'support'],
-            'ordering' => 3,
+            'ordering' => 5,
             'active'   => true,
         ]);
 
