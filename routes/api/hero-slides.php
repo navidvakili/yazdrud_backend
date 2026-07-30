@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::group(['middleware' => 'role_or_permission:admin|support|hero-slides.view|hero-slides.create|hero-slides.edit|hero-slides.delete'], function () {
+Route::prefix('admin')->middleware('role_or_permission:admin|support|hero-slides.view|hero-slides.create|hero-slides.edit|hero-slides.delete')->group(function () {
     Route::get('/hero-slides', [HeroSlideController::class, 'adminIndex']);
     Route::post('/hero-slides', [HeroSlideController::class, 'store']);
     Route::put('/hero-slides/{id}', [HeroSlideController::class, 'update']);

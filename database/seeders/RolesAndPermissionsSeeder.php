@@ -57,12 +57,13 @@ class RolesAndPermissionsSeeder extends Seeder
             $support = Role::firstOrCreate(['name' => 'support', 'guard_name' => $guard]);
             $support->givePermissionTo(Permission::where('guard_name', $guard)->get());
 
-            // Admin — limited to users, sessions, news management
+            // Admin — limited to users, sessions, news, hero-slides county-projects management
             $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
             $adminPermissions = Permission::where('guard_name', $guard)->whereIn('name', [
                 'users.view', 'users.create', 'users.edit', 'users.delete',
                 'sessions.view', 'sessions.create', 'sessions.edit', 'sessions.delete',
                 'news.view', 'news.create', 'news.edit', 'news.delete', 'news.approve',
+                'hero-slides.view', 'hero-slides.create', 'hero-slides.edit', 'hero-slides.delete',
                 'county-projects.view', 'county-projects.edit',
             ])->get();
             $admin->givePermissionTo($adminPermissions);
