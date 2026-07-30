@@ -47,6 +47,9 @@ Route::get('/county-projects/{countyId}', [\App\Http\Controllers\Api\CountyProje
 // ==================== Public Slider Studio Routes (no auth required) ====================
 Route::get('/slider-studio/public', [\App\Http\Controllers\Api\SliderProjectController::class, 'publicIndex']);
 
+// ==================== Public Development Timeline Routes (no auth required) ====================
+Route::get('/development-timeline', [\App\Http\Controllers\Api\DevelopmentTimelineController::class, 'publicIndex']);
+
 // ==================== Media Upload (outside auth:api to avoid Passport PSR-7 file upload bug) ====================
 Route::post('/media/upload', [\App\Http\Controllers\Api\MediaController::class, 'upload']);
 

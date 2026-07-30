@@ -26,12 +26,13 @@ class RolesAndPermissionsSeeder extends Seeder
         | Each module gets view/create/edit/delete/approve permissions.
         */
         $modules = [
-            'users'           => 'مدیریت کاربران',
-            'roles'           => 'مدیریت نقش‌ها',
-            'news'            => 'اخبار',
-            'sessions'        => 'مدیریت نشست‌ها',
-            'county-projects' => 'نقشه پروژه‌های عمرانی',
-            'slider-studio'   => 'اسلایدر هوشمند',
+            'users'                => 'مدیریت کاربران',
+            'roles'                => 'مدیریت نقش‌ها',
+            'news'                 => 'اخبار',
+            'sessions'             => 'مدیریت نشست‌ها',
+            'county-projects'      => 'نقشه پروژه‌های عمرانی',
+            'slider-studio'        => 'اسلایدر هوشمند',
+            'development-timeline' => 'روند توسعه و تحول عمرانی',
         ];
 
         $actions = ['view', 'create', 'edit', 'delete', 'approve'];
@@ -65,6 +66,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'news.view', 'news.create', 'news.edit', 'news.delete', 'news.approve',
                 'slider-studio.view', 'slider-studio.edit',
                 'county-projects.view', 'county-projects.edit',
+                'development-timeline.view', 'development-timeline.create', 'development-timeline.edit', 'development-timeline.delete',
             ])->get();
             $admin->givePermissionTo($adminPermissions);
 

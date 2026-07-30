@@ -81,7 +81,18 @@ class AccessesSeeder extends Seeder
             'active'   => true,
         ]);
 
-        // ── 3. اسلایدر هوشمند (top-level) ──────────────────────────
+        // ── 3. روند توسعه و تحول عمرانی (top-level) ────────────────
+        Access::create([
+            'parent'   => null,
+            'title'    => 'روند توسعه و تحول عمرانی',
+            'url'      => '/development-timeline',
+            'icon'     => 'fa fa-road',
+            'roles'    => ['admin', 'support'],
+            'ordering' => 3,
+            'active'   => true,
+        ]);
+
+        // ── 4. اسلایدر هوشمند (top-level) ──────────────────────────
         Access::create([
             'parent'   => null,
             'title'    => 'اسلایدر هوشمند',
