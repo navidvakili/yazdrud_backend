@@ -222,13 +222,17 @@ class ConvertHeroSlidesToSliderProject extends Seeder
             'slides' => $projectSlides->toArray(),
         ];
 
-        SliderProject::create([
-            'title' => 'اسلایدهای صفحه اصلی',
-            'description' => 'اسلایدهای منتقل شده از بخش مدیریت اسلایدر کلاسیک',
-            'project_data' => $projectData,
-            'is_active' => true,
-            'sort_order' => 0,
-        ]);
+        // Use updateOrCreate so this seeder is idempotent
+        SliderProject::updateOrCreate(
+            ['title' => 'اسلایدهای صفحه اصلی'],
+            [
+                'title' => 'اسلایدهای صفحه اصلی',
+                'description' => 'اسلایدهای منتقل شده از بخش مدیریت اسلایدر کلاسیک',
+                'project_data' => $projectData,
+                'is_active' => true,
+                'sort_order' => 0,
+            ]
+        );
 
         $this->command->info('✅ Hero slides converted to SliderProject successfully.');
         $this->command->info("   Slides converted: {$heroSlides->count()}");
