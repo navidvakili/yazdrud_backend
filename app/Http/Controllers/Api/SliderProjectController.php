@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\NormalizesMediaUrls;
 use App\Models\SliderProject;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 
 class SliderProjectController extends Controller
 {
+    use NormalizesMediaUrls;
     /**
      * Public: Get the active slider project with processed slides.
      * Returns the full project data suitable for rendering on the public site.
@@ -23,7 +25,7 @@ class SliderProjectController extends Controller
         }
 
         return response()->json([
-            'data' => $project->project_data,
+            'data' => $this->resolveSliderProjectData($project->project_data),
         ]);
     }
 
@@ -96,7 +98,9 @@ class SliderProjectController extends Controller
         }
 
         return response()->json([
-            'data' => $project,
+            'data' => array_merge($project->toArray(), [
+                'project_data' => $this->resolveSliderProjectData($project->project_data),
+            ]),
         ]);
     }
 
@@ -118,7 +122,7 @@ class SliderProjectController extends Controller
         }
 
         $data = $request->all();
-        $data['project_data'] = json_decode($request->input('project_data'), true);
+        $data['project_data'] = $this->normalizeSliderProjectData(json_decode($request->input('project_data'), true));
 
         if (!isset($data['sort_order'])) {
             $data['sort_order'] = SliderProject::max('sort_order') + 1;
@@ -128,7 +132,9 @@ class SliderProjectController extends Controller
 
         return response()->json([
             'message' => 'پروژه با موفقیت ایجاد شد.',
-            'data' => $project,
+            'data' => array_merge($project->toArray(), [
+                'project_data' => $this->resolveSliderProjectData($project->project_data),
+            ]),
         ], 201);
     }
 
@@ -157,14 +163,16 @@ class SliderProjectController extends Controller
 
         $data = $request->all();
         if ($request->has('project_data')) {
-            $data['project_data'] = json_decode($request->input('project_data'), true);
+            $data['project_data'] = $this->normalizeSliderProjectData(json_decode($request->input('project_data'), true));
         }
 
         $project->update($data);
 
         return response()->json([
             'message' => 'پروژه با موفقیت به‌روزرسانی شد.',
-            'data' => $project,
+            'data' => array_merge($project->fresh()->toArray(), [
+                'project_data' => $this->resolveSliderProjectData($project->fresh()->project_data),
+            ]),
         ]);
     }
 

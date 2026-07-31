@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\NormalizesMediaUrls;
 use App\Models\News;
 use App\Models\NewsCategory;
 use App\Models\RoleCategoryPermission;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
 
 class NewsController extends Controller
 {
+    use NormalizesMediaUrls;
+
     // ==================== NEWS CRUD ====================
 
     /**
@@ -141,15 +144,15 @@ class NewsController extends Controller
             'author_username' => $user->username,
             'author_name' => trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')),
             'author_role' => $user->role ?? null,
-            'image_url' => $validated['image_url'] ?? null,
+            'image_url' => $this->normalizeMediaUrlValue($validated['image_url'] ?? null),
             'is_pinned' => $validated['is_pinned'] ?? false,
             'comments_enabled' => $validated['comments_enabled'] ?? true,
             'is_photo_report' => $validated['is_photo_report'] ?? false,
-            'photo_report_images' => $validated['photo_report_images'] ?? [],
+            'photo_report_images' => $this->normalizePhotoReportImages($validated['photo_report_images'] ?? []),
             'status' => $validated['status'],
             'target_audience' => $validated['target_audience'] ?? 'all',
             'tags' => $validated['tags'] ?? [],
-            'attachments' => $validated['attachments'] ?? [],
+            'attachments' => $this->normalizeAttachments($validated['attachments'] ?? []),
             'published_at' => $validated['status'] === 'published'
                 ? ($validated['published_at'] ?? now())
                 : null,
@@ -213,6 +216,18 @@ class NewsController extends Controller
             if (!$request->user()->can('news.approve')) {
                 $validated['status'] = 'draft';
             }
+        }
+
+        if (array_key_exists('image_url', $validated)) {
+            $validated['image_url'] = $this->normalizeMediaUrlValue($validated['image_url'] ?? null);
+        }
+
+        if (array_key_exists('photo_report_images', $validated)) {
+            $validated['photo_report_images'] = $this->normalizePhotoReportImages($validated['photo_report_images'] ?? []);
+        }
+
+        if (array_key_exists('attachments', $validated)) {
+            $validated['attachments'] = $this->normalizeAttachments($validated['attachments'] ?? []);
         }
 
         $news->update($validated);
@@ -556,7 +571,7 @@ class NewsController extends Controller
             'category_color' => $news->category?->color,
             'author_username' => $news->author_username,
             'author_name' => $news->author_name,
-            'image_url' => $news->image_url,
+            'image_url' => $this->resolveMediaUrlValue($news->image_url),
             'views_count' => (int) ($news->views_count ?? 0),
             'likes_count' => (int) ($news->likes_count ?? 0),
             'is_pinned' => $news->is_pinned,
@@ -576,8 +591,8 @@ class NewsController extends Controller
     {
         $base = $this->formatNews($news) + [
             'content' => $news->content,
-            'attachments' => $news->attachments ?? [],
-            'photo_report_images' => $news->photo_report_images ?? [],
+            'attachments' => $this->resolveAttachments($news->attachments ?? []),
+            'photo_report_images' => $this->resolvePhotoReportImages($news->photo_report_images ?? []),
         ];
 
         // Include approved comments if the relation is loaded

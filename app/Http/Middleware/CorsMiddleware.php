@@ -14,23 +14,33 @@ class CorsMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Handle preflight OPTIONS request immediately
+        $origin = $request->headers->get('Origin');
+        $allowedHeaders = $request->headers->get('Access-Control-Request-Headers')
+            ?? 'Content-Type, Authorization, Accept, X-Requested-With, Origin';
+
+        $buildCorsResponse = function ($response) use ($origin, $allowedHeaders) {
+            if ($origin) {
+                $response->headers->set('Access-Control-Allow-Origin', $origin);
+                $response->headers->set('Vary', 'Origin');
+                $response->headers->set('Access-Control-Allow-Credentials', 'true');
+            } else {
+                $response->headers->set('Access-Control-Allow-Origin', '*');
+            }
+
+            $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+            $response->headers->set('Access-Control-Allow-Headers', $allowedHeaders);
+            $response->headers->set('Access-Control-Expose-Headers', 'Content-Disposition');
+            $response->headers->set('Access-Control-Max-Age', '86400');
+
+            return $response;
+        };
+
         if ($request->isMethod('OPTIONS')) {
-            return response('', 204)
-                ->header('Access-Control-Allow-Origin', '*')
-                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-                ->header('Access-Control-Allow-Headers', '*')
-                ->header('Access-Control-Max-Age', '86400');
+            return $buildCorsResponse(response('', 204));
         }
 
-        // Process the request and add CORS headers to the response
         $response = $next($request);
 
-        $response->headers->set('Access-Control-Allow-Origin', '*');
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', '*');
-        $response->headers->set('Access-Control-Expose-Headers', 'Content-Disposition');
-
-        return $response;
+        return $buildCorsResponse($response);
     }
 }

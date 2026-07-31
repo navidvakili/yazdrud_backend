@@ -556,7 +556,7 @@ class ImportLegacyNews extends Command
                 $this->stats['images_copied']++;
             }
 
-            return Storage::disk('public')->url($targetDir . '/' . $newFilename);
+            return $targetDir . '/' . $newFilename;
         }
 
         return null;
@@ -582,7 +582,7 @@ class ImportLegacyNews extends Command
                 $this->stats['images_copied']++;
             }
 
-            return Storage::disk('public')->url($targetDir . '/' . $newFilename);
+            return $targetDir . '/' . $newFilename;
         }
 
         // Check in legacy storage (copied files)
@@ -598,7 +598,7 @@ class ImportLegacyNews extends Command
                 $this->stats['images_copied']++;
             }
 
-            return Storage::disk('public')->url($targetDir . '/' . $newFilename);
+            return $targetDir . '/' . $newFilename;
         }
 
         return null;
