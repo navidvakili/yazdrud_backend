@@ -24,8 +24,10 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        // Assign 'support' (developer) and 'admin' roles via Spatie (for api guard)
-        $user->assignRole(['support', 'admin']);
+        // Assign only the 'admin' role via Spatie (for api guard).
+        // The 'support' role is reserved exclusively for the developer
+        // (پشتیبان) user — admins must not have it.
+        $user->syncRoles(['admin']);
 
         // Create personal access client if it doesn't exist
         // Passport 13 uses grant_types JSON — 'personal_access' grant type identifies personal clients
@@ -49,6 +51,6 @@ class AdminUserSeeder extends Seeder
             $this->command->info('✅ Passport personal access client "portal-api" created.');
         }
 
-        $this->command->info('✅ کاربر admin با موفقیت ایجاد شد و نقش‌های support و admin به او اختصاص یافت.');
+        $this->command->info('✅ کاربر admin با موفقیت ایجاد شد و نقش admin به او اختصاص یافت.');
     }
 }
