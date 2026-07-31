@@ -61,7 +61,9 @@ class SliderProjectController extends Controller
         }
 
         return response()->json([
-            'data' => $project,
+            'data' => array_merge($project->toArray(), [
+                'project_data' => $this->resolveSliderProjectData($project->project_data),
+            ]),
         ]);
     }
 
