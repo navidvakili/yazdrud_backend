@@ -3,15 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Library\MediaMime;
+use App\Models\MediaFile;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MediaController extends Controller
 {
+    /** How long a cached index page stays valid (unless invalidated by an upload/delete) */
+    private const INDEX_CACHE_TTL_SECONDS = 1800;
+
     /**
      * آپلود فایل رسانه (تصویر، PDF و...)
      */
@@ -39,6 +45,17 @@ class MediaController extends Controller
             }
         }
 
+        // Persist metadata; the MediaFileObserver invalidates the listing cache
+        MediaFile::updateOrCreate(
+            ['path' => $path],
+            [
+                'name' => $file->getClientOriginalName(),
+                'mime_type' => MediaMime::fromPath($path),
+                'size' => Storage::disk('public')->size($path),
+                'uploaded_at' => now(),
+            ]
+        );
+
         return response()->json([
             'message' => 'فایل با موفقیت آپلود شد.',
             'data' => $this->formatFile($path, $file->getClientOriginalName()),
@@ -46,11 +63,10 @@ class MediaController extends Controller
     }
 
     /**
-     * لیست فایل‌های آپلود شده
+     * لیست فایل‌های آپلود شده (با کش صفحه‌بندی‌شده)
      */
     public function index(Request $request): JsonResponse
     {
-        $directory = 'media';
         $page = max((int) $request->input('page', 1), 1);
         $perPage = min((int) $request->input('per_page', 20), 100);
         $search = trim((string) $request->input('search', ''));
@@ -59,49 +75,47 @@ class MediaController extends Controller
             : 'created_at';
         $sortOrder = strtolower((string) $request->input('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
 
-        if (!Storage::disk('public')->exists($directory)) {
-            return response()->json(['data' => [], 'total' => 0, 'page' => $page, 'per_page' => $perPage, 'last_page' => 0]);
+        // Safety net: on a fresh deployment, backfill the metadata table from disk once
+        if (MediaFile::query()->doesntExist()) {
+            $this->syncMediaFilesFromDisk();
         }
 
-        // Recursively list files under media/Y/m/...
-        $paths = Storage::disk('public')->allFiles($directory);
-        $allFiles = array_map(fn(string $path) => $this->formatFile($path), $paths);
+        // Each cache key includes the cache version (bumped by the observer on
+        // every upload/delete), so stale pages are never served.
+        $cacheKey = sprintf(
+            'media.index.%d.%s.%s.%s.%d.%d',
+            Cache::get('media.version', 0),
+            $sortBy,
+            $sortOrder,
+            md5($search),
+            $page,
+            $perPage
+        );
 
-        if ($search !== '') {
-            $allFiles = array_filter($allFiles, fn(array $file) => mb_stripos($file['name'], $search) !== false);
-        }
+        $payload = Cache::remember($cacheKey, now()->addSeconds(self::INDEX_CACHE_TTL_SECONDS), function () use ($search, $sortBy, $sortOrder, $page, $perPage) {
+            // 'created_at' maps to the uploaded_at column
+            $column = $sortBy === 'created_at' ? 'uploaded_at' : $sortBy;
 
-        usort($allFiles, function (array $a, array $b) use ($sortBy, $sortOrder) {
-            if ($sortBy === 'name') {
-                $result = strcasecmp($a['name'], $b['name']);
-            } elseif ($sortBy === 'size') {
-                $result = $a['size'] <=> $b['size'];
-            } else {
-                $result = strtotime($a['created_at']) <=> strtotime($b['created_at']);
+            $query = MediaFile::query();
+            if ($search !== '') {
+                $query->where('name', 'like', '%' . addcslashes($search, '%_\\') . '%');
             }
+            $query->orderBy($column, $sortOrder)->orderBy('path');
 
-            if ($result === 0) {
-                $result = strcmp($a['path'], $b['path']);
-            }
+            $files = $query->paginate($perPage, ['*'], 'page', $page);
 
-            return $sortOrder === 'asc' ? $result : -$result;
+            return [
+                'data' => array_map(fn (MediaFile $file) => $this->formatFileFromModel($file), $files->items()),
+                'total' => $files->total(),
+                'page' => $files->currentPage(),
+                'per_page' => $files->perPage(),
+                'last_page' => $files->lastPage(),
+                'sort_by' => $sortBy,
+                'sort_order' => $sortOrder,
+            ];
         });
 
-        $total = count($allFiles);
-        $lastPage = (int) max(1, ceil($total / $perPage));
-        $page = min($page, $lastPage);
-        $offset = ($page - 1) * $perPage;
-        $paged = array_slice($allFiles, $offset, $perPage);
-
-        return response()->json([
-            'data' => $paged,
-            'total' => $total,
-            'page' => $page,
-            'per_page' => $perPage,
-            'last_page' => $lastPage,
-            'sort_by' => $sortBy,
-            'sort_order' => $sortOrder,
-        ]);
+        return response()->json($payload);
     }
 
     /**
@@ -122,7 +136,63 @@ class MediaController extends Controller
             Storage::disk('public')->delete($path);
         }
 
+        // Remove metadata via a model instance so MediaFileObserver::deleted()
+        // fires (query-builder deletes do NOT dispatch model events)
+        $file = MediaFile::where('path', $path)->first();
+        $file?->delete();
+
         return response()->json(['message' => 'فایل با موفقیت حذف شد.']);
+    }
+
+    /**
+     * Build the API response shape for a media file.
+     */
+    private function formatFileFromModel(MediaFile $file): array
+    {
+        return [
+            'id' => md5($file->path),
+            'name' => $file->name,
+            'url' => Storage::disk('public')->url($file->path),
+            'path' => $file->path,
+            'size' => $file->size,
+            'type' => $file->mime_type,
+            'created_at' => $file->uploaded_at?->format('c') ?? now()->format('c'),
+        ];
+    }
+
+    /**
+     * Backfill the media_files table from the disk (single traversal).
+     * Used by the index() safety net; the media:sync command offers the
+     * same logic with console output and an optional prune.
+     */
+    private function syncMediaFilesFromDisk(): void
+    {
+        if (!Cache::add('media.syncing', 1, 300)) {
+            return; // another sync is already running
+        }
+
+        try {
+            $disk = Storage::disk('public');
+            foreach ($disk->listContents('media', true) as $item) {
+                if (!$item->isFile()) {
+                    continue;
+                }
+
+                MediaFile::updateOrCreate(
+                    ['path' => $item->path()],
+                    [
+                        'name' => basename($item->path()),
+                        'mime_type' => MediaMime::fromPath($item->path()),
+                        'size' => $item->fileSize() ?? 0,
+                        'uploaded_at' => $item->lastModified()
+                            ? date('Y-m-d H:i:s', $item->lastModified())
+                            : now(),
+                    ]
+                );
+            }
+        } finally {
+            Cache::forget('media.syncing');
+        }
     }
 
     /**
@@ -164,7 +234,11 @@ class MediaController extends Controller
 
             $user = User::find($token->user_id);
             if ($user) {
-                Auth::setUser($user->withAccessToken($token));
+                // Attach the token only if this Passport version supports it
+                // (Token implements ScopeAuthorizable in some versions, plain Model in others)
+                if ($token instanceof \Laravel\Passport\Contracts\ScopeAuthorizable) {
+                    Auth::setUser($user->withAccessToken($token));
+                }
                 return $user;
             }
         } catch (\Exception $e) {
@@ -259,13 +333,6 @@ class MediaController extends Controller
     private function formatFile(string $path, ?string $originalName = null): array
     {
         $url = Storage::disk('public')->url($path);
-        $mime = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';
-        // Fallback for video mime types that storage may misdetect
-        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        $videoMimes = ['mp4' => 'video/mp4', 'webm' => 'video/webm', 'mov' => 'video/quicktime', 'avi' => 'video/x-msvideo', 'mkv' => 'video/x-matroska', 'flv' => 'video/x-flv'];
-        if (isset($videoMimes[$ext])) {
-            $mime = $videoMimes[$ext];
-        }
         $size = Storage::disk('public')->size($path);
         $lastModified = Storage::disk('public')->lastModified($path);
 
@@ -275,7 +342,7 @@ class MediaController extends Controller
             'url' => $url,
             'path' => $path,
             'size' => $size,
-            'type' => $mime,
+            'type' => MediaMime::fromPath($path),
             'created_at' => date('c', $lastModified),
         ];
     }
