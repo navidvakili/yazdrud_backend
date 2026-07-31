@@ -45,25 +45,37 @@ class MediaController extends Controller
     public function index(Request $request): JsonResponse
     {
         $directory = 'media';
+        $page = max((int) $request->input('page', 1), 1);
         $perPage = min((int) $request->input('per_page', 24), 100);
+        $search = trim((string) $request->input('search', ''));
 
         if (!Storage::disk('public')->exists($directory)) {
-            return response()->json(['data' => [], 'total' => 0]);
+            return response()->json(['data' => [], 'total' => 0, 'page' => $page, 'per_page' => $perPage, 'last_page' => 0]);
         }
 
         // Recursively list files under media/Y/m/...
         $paths = Storage::disk('public')->allFiles($directory);
         $allFiles = array_map(fn(string $path) => $this->formatFile($path), $paths);
 
+        if ($search !== '') {
+            $allFiles = array_filter($allFiles, fn(array $file) => mb_stripos($file['name'], $search) !== false);
+        }
+
         // Sort by newest first
         usort($allFiles, fn($a, $b) => strtotime($b['created_at']) - strtotime($a['created_at']));
 
         $total = count($allFiles);
-        $paged = array_slice($allFiles, 0, $perPage);
+        $lastPage = (int) max(1, ceil($total / $perPage));
+        $page = min($page, $lastPage);
+        $offset = ($page - 1) * $perPage;
+        $paged = array_slice($allFiles, $offset, $perPage);
 
         return response()->json([
             'data' => $paged,
             'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'last_page' => $lastPage,
         ]);
     }
 
