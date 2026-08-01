@@ -506,8 +506,8 @@ class NewsController extends Controller
         $user = $request->user();
         if (!$user) return;
 
-        // Admin users bypass all category restrictions
-        if ($user->hasRole('admin')) return;
+        // Super users (admin/support usernames) and admin-role users bypass all category restrictions
+        if ($user->isSuperUser()) return;
 
         // Get all role IDs for this user
         $roleIds = $user->roles()->pluck('spatie_roles.id');
@@ -538,8 +538,8 @@ class NewsController extends Controller
         $user = $request->user();
         if (!$user) return false;
 
-        // Admin users bypass all category restrictions
-        if ($user->hasRole('admin')) return true;
+        // Super users (admin/support usernames) and admin-role users bypass all category restrictions
+        if ($user->isSuperUser()) return true;
 
         $roleIds = $user->roles()->pluck('spatie_roles.id');
         if ($roleIds->isEmpty()) return false;

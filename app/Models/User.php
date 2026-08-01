@@ -86,4 +86,13 @@ class User extends Authenticatable
     {
         return $this->getRoleNames()->toArray();
     }
+
+    /**
+     * Check if the user is a super user (username 'admin' or 'support').
+     * Super users bypass ALL permission checks and have full access to every section.
+     */
+    public function isSuperUser(): bool
+    {
+        return in_array($this->username, ['admin', 'support']);
+    }
 }

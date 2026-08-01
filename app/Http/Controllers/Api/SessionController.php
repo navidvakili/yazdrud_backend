@@ -97,8 +97,8 @@ class SessionController extends Controller
     {
         $user = $request->user();
 
-        // Only admins can access this (Spatie role check)
-        if (!$user->hasRole('admin')) {
+        // Only super users (usernames admin/support) or admin-role users can access this
+        if (!$user->isSuperUser()) {
             return response()->json([
                 'message' => 'شما مجوز دسترسی به این بخش را ندارید',
             ], 403);
@@ -155,8 +155,8 @@ class SessionController extends Controller
     {
         $user = $request->user();
 
-        // Only admins can access this (Spatie role check)
-        if (!$user->hasRole('admin')) {
+        // Only super users (usernames admin/support) or admin-role users can access this
+        if (!$user->isSuperUser() && !$user->hasRole('admin')) {
             return response()->json([
                 'message' => 'شما مجوز دسترسی به این بخش را ندارید',
             ], 403);
