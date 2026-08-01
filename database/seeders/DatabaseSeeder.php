@@ -20,7 +20,6 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             AccessesSeeder::class,
             CountyProjectSeeder::class,
-            HeroSlideSeeder::class,
         ]);
     }
 }
