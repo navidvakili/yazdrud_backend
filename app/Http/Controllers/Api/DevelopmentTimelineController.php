@@ -20,9 +20,12 @@ class DevelopmentTimelineController extends Controller
      *
      * @return JsonResponse
      */
-    public function publicIndex(): JsonResponse
+    public function publicIndex(Request $request): JsonResponse
     {
-        $items = DevelopmentTimelineItem::active()->ordered()->get();
+        $items = DevelopmentTimelineItem::active()
+            ->where('language', \App\Models\Language::resolve($request->input('lang')))
+            ->ordered()
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -73,7 +76,9 @@ class DevelopmentTimelineController extends Controller
             ], 422);
         }
 
-        $item = DevelopmentTimelineItem::create($validator->validated());
+        $item = DevelopmentTimelineItem::create(array_merge($validator->validated(), [
+            'language' => \App\Models\Language::resolveRequest($request),
+        ]));
 
         return response()->json([
             'success' => true,
@@ -143,7 +148,9 @@ class DevelopmentTimelineController extends Controller
             ], 422);
         }
 
-        $item->update($validator->validated());
+        $item->update(array_merge($validator->validated(), [
+            'language' => \App\Models\Language::resolveRequest($request),
+        ]));
 
         return response()->json([
             'success' => true,

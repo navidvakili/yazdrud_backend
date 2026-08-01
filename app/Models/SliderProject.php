@@ -15,6 +15,7 @@ class SliderProject extends Model
         'project_data',
         'is_active',
         'sort_order',
+        'language',
     ];
 
     protected $casts = [

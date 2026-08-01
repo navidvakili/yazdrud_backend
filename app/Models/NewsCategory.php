@@ -16,6 +16,7 @@ class NewsCategory extends Model
         'description',
         'is_active',
         'ordering',
+        'language',
     ];
 
     protected $casts = [

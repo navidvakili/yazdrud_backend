@@ -25,6 +25,9 @@ class NewsController extends Controller
     {
         $query = News::query()->with('category')->withCount('approvedComments');
 
+        // Filter by language (default: default language)
+        $query->where('language', \App\Models\Language::resolve($request->input('lang')));
+
         // Search by title, summary, tags
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -120,6 +123,7 @@ class NewsController extends Controller
             'tags.*' => 'string',
             'attachments' => 'nullable|array',
             'published_at' => 'nullable|date',
+            'lang' => 'nullable|string|max:10',
         ]);
 
         // Validate category access
@@ -137,6 +141,7 @@ class NewsController extends Controller
         }
 
         $news = News::create([
+            'language' => \App\Models\Language::resolveRequest($request),
             'title' => $validated['title'],
             'summary' => $validated['summary'] ?? null,
             'content' => $validated['content'] ?? '',
@@ -194,6 +199,11 @@ class NewsController extends Controller
             'attachments' => 'nullable|array',
             'published_at' => 'nullable|date',
         ]);
+
+        // Resolve language from lang/language if provided, else keep existing
+        if ($request->filled('lang') || $request->filled('language')) {
+            $validated['language'] = \App\Models\Language::resolveRequest($request);
+        }
 
         // Validate category access if changing category
         if (array_key_exists('category_id', $validated)) {
@@ -321,7 +331,8 @@ class NewsController extends Controller
     public function categories(Request $request): JsonResponse
     {
         $query = NewsCategory::orderBy('ordering')
-            ->orderBy('name');
+            ->orderBy('name')
+            ->where('language', \App\Models\Language::resolve($request->input('lang')));
 
         // Filter by category-level permissions (if user has restrictions)
         $this->applyCategoryRestriction($request, $query, 'news', 'view', 'id');
@@ -352,10 +363,12 @@ class NewsController extends Controller
             'slug' => 'nullable|string|max:150|unique:news_categories,slug',
             'color' => 'nullable|string|max:100',
             'description' => 'nullable|string',
+            'lang' => 'nullable|string|max:10',
         ]);
 
         $slug = $validated['slug'] ?? Str::slug($validated['name']);
         $validated['slug'] = $slug !== '' ? $slug : ('cat-' . Str::lower(Str::random(8)));
+        $validated['language'] = \App\Models\Language::resolveRequest($request);
 
         $category = NewsCategory::create($validated);
 

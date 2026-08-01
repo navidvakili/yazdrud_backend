@@ -13,9 +13,10 @@ class CountyProjectController extends Controller
     /**
      * Public: Get all active county projects for the interactive map.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $counties = CountyProject::where('is_active', true)
+            ->where('language', \App\Models\Language::resolve($request->input('lang')))
             ->orderBy('county_id')
             ->get();
 
@@ -27,9 +28,10 @@ class CountyProjectController extends Controller
     /**
      * Public: Get a single county project by county_id.
      */
-    public function show(string $countyId): JsonResponse
+    public function show(Request $request, string $countyId): JsonResponse
     {
         $county = CountyProject::where('county_id', $countyId)
+            ->where('language', \App\Models\Language::resolve($request->input('lang')))
             ->where('is_active', true)
             ->first();
 
@@ -47,7 +49,8 @@ class CountyProjectController extends Controller
      */
     public function adminIndex(Request $request): JsonResponse
     {
-        $query = CountyProject::query();
+        $query = CountyProject::query()
+            ->where('language', \App\Models\Language::resolve($request->input('lang')));
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -97,7 +100,9 @@ class CountyProjectController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $county->update($request->all());
+        $county->update(array_merge($request->all(), [
+            'language' => \App\Models\Language::resolveRequest($request),
+        ]));
 
         return response()->json([
             'message' => 'اطلاعات شهرستان با موفقیت به‌روزرسانی شد',
@@ -134,7 +139,9 @@ class CountyProjectController extends Controller
         foreach ($request->input('counties') as $data) {
             $county = CountyProject::find($data['id']);
             if ($county) {
-                $county->update($data);
+                $county->update(array_merge($data, [
+                    'language' => \App\Models\Language::resolveRequest($request),
+                ]));
                 $updated[] = $county->fresh();
             }
         }

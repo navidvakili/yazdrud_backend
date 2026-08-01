@@ -13,6 +13,7 @@ class DevelopmentTimelineItem extends Model
         'value_index',
         'sort_order',
         'is_active',
+        'language',
     ];
 
     protected $casts = [

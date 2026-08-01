@@ -28,6 +28,7 @@ class News extends Model
         'tags',
         'attachments',
         'published_at',
+        'language',
     ];
 
     protected $casts = [

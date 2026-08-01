@@ -19,6 +19,7 @@ class CountyProject extends Model
         'has_housing_workshop',
         'description',
         'is_active',
+        'language',
     ];
 
     protected $casts = [

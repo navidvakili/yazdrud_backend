@@ -16,9 +16,12 @@ class SliderProjectController extends Controller
      * Public: Get the active slider project with processed slides.
      * Returns the full project data suitable for rendering on the public site.
      */
-    public function publicIndex(): JsonResponse
+    public function publicIndex(Request $request): JsonResponse
     {
-        $project = SliderProject::active()->orderBy('sort_order')->first();
+        $project = SliderProject::active()
+            ->where('language', \App\Models\Language::resolve($request->input('lang')))
+            ->orderBy('sort_order')
+            ->first();
 
         if (!$project) {
             return response()->json(['data' => null]);
@@ -33,12 +36,18 @@ class SliderProjectController extends Controller
      * Admin: Get the current (single) slider project.
      * If none exists, creates a default empty one automatically.
      */
-    public function current(): JsonResponse
+    public function current(Request $request): JsonResponse
     {
-        $project = SliderProject::active()->orderBy('sort_order')->first();
+        $lang = \App\Models\Language::resolve($request->input('lang'));
+
+        $project = SliderProject::active()
+            ->where('language', $lang)
+            ->orderBy('sort_order')
+            ->first();
 
         if (!$project) {
             $project = SliderProject::create([
+                'language' => $lang,
                 'title' => 'اسلایدهای وب‌سایت',
                 'description' => 'اسلایدر اصلی وب‌سایت',
                 'project_data' => [
@@ -72,7 +81,8 @@ class SliderProjectController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = SliderProject::query();
+        $query = SliderProject::query()
+            ->where('language', \App\Models\Language::resolve($request->input('lang')));
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -125,6 +135,7 @@ class SliderProjectController extends Controller
 
         $data = $request->all();
         $data['project_data'] = $this->normalizeSliderProjectData(json_decode($request->input('project_data'), true));
+        $data['language'] = \App\Models\Language::resolveRequest($request);
 
         if (!isset($data['sort_order'])) {
             $data['sort_order'] = SliderProject::max('sort_order') + 1;
@@ -167,6 +178,7 @@ class SliderProjectController extends Controller
         if ($request->has('project_data')) {
             $data['project_data'] = $this->normalizeSliderProjectData(json_decode($request->input('project_data'), true));
         }
+        $data['language'] = \App\Models\Language::resolveRequest($request);
 
         $project->update($data);
 
