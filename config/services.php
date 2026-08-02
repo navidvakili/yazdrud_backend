@@ -51,4 +51,17 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Public Site Locales Path
+    |--------------------------------------------------------------------------
+    |
+    | Absolute path to the public site's `src/locales` directory (the Vite SPA
+    | under ../public). When a new language is created, its `<code>.ts` file is
+    | generated here from the Persian template (fa.ts). Override in .env via
+    | PUBLIC_LOCALES_PATH when the folders live elsewhere.
+    |
+    */
+    'public_locales_path' => env('PUBLIC_LOCALES_PATH', base_path('../public/src/locales')),
+
 ];

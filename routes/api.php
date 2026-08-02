@@ -51,7 +51,15 @@ Route::get('/slider-studio/public', [\App\Http\Controllers\Api\SliderProjectCont
 Route::get('/development-timeline', [\App\Http\Controllers\Api\DevelopmentTimelineController::class, 'publicIndex']);
 
 // ==================== Public Languages Routes (no auth required) ====================
-Route::get('/languages', [\App\Http\Controllers\Api\LanguageController::class, 'publicIndex']);
+// The v1 prefix keeps these out of the way of the authenticated /languages
+// routes (routes/api/languages.php) — Laravel matches in reverse registration
+// order, and the auth'd routes are registered after these.
+Route::prefix('v1')->group(function () {
+    Route::get('/languages', [\App\Http\Controllers\Api\LanguageController::class, 'publicIndex']);
+    // Runtime translations JSON — lets the public site reflect locale-editor
+    // changes on an already-built site without rebuilding.
+    Route::get('/languages/{code}/locale', [\App\Http\Controllers\Api\LanguageController::class, 'publicLocale']);
+});
 
 // ==================== Media Upload (outside auth:api to avoid Passport PSR-7 file upload bug) ====================
 Route::post('/media/upload', [\App\Http\Controllers\Api\MediaController::class, 'upload']);

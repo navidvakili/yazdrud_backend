@@ -8,17 +8,23 @@ use Illuminate\Support\Facades\Route;
 | Language Routes (authenticated)
 |--------------------------------------------------------------------------
 | Only the user with username "support" can manage languages.
-| Public listing is served from routes/api.php (publicIndex) — note the
-| authenticated GET /languages (index) is intentionally NOT registered here:
-| registering it after the public route would shadow it (Laravel matches in
-| reverse registration order) and the public endpoint would return 401.
-| yazdrud has no admin language-manager UI, so only the support CRUD is needed.
+| Public endpoints live under /api/v1/... in routes/api.php (publicIndex /
+| publicLocale) — the v1 prefix keeps them out of the way of these
+| authenticated routes, because Laravel matches routes in reverse
+| registration order and these auth'd routes are registered last.
 */
 
 Route::group(['middleware' => 'auth:api'], function () {
+    // List all languages (any authenticated user — needed to show the selector)
+    Route::get('/languages', [LanguageController::class, 'index']);
+
+    // CRUD + locale editing — ONLY the user with username "support"
+    // (admin and any other user are explicitly NOT allowed)
     Route::group(['middleware' => 'support.only'], function () {
         Route::post('/languages', [LanguageController::class, 'store']);
         Route::put('/languages/{id}', [LanguageController::class, 'update']);
         Route::delete('/languages/{id}', [LanguageController::class, 'destroy']);
+        Route::get('/languages/{code}/locale', [LanguageController::class, 'locale']);
+        Route::put('/languages/{code}/locale', [LanguageController::class, 'updateLocale']);
     });
 });
