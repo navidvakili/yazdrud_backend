@@ -26,7 +26,7 @@ class SessionController extends Controller
             ->orderBy('created_at', 'desc')
             ->get([
                 'id', 'ip_address', 'user_agent', 'browser_fingerprint',
-                'created_at', 'updated_at', 'expires_at',
+                'created_at', 'updated_at', 'expires_at', 'last_used_at',
             ]);
 
         // Format sessions
@@ -39,7 +39,7 @@ class SessionController extends Controller
             ->where('id', $currentTokenId)
             ->first([
                 'id', 'ip_address', 'user_agent', 'browser_fingerprint',
-                'created_at', 'updated_at', 'expires_at',
+                'created_at', 'updated_at', 'expires_at', 'last_used_at',
             ]);
 
         $currentFormatted = $currentSession
@@ -98,7 +98,9 @@ class SessionController extends Controller
         $user = $request->user();
 
         // Only super users (usernames admin/support) or admin-role users can access this
-        if (!$user->isSuperUser()) {
+        // (matches adminRevoke()'s check below — previously narrower here, which meant
+        // an admin-role user could revoke a session they couldn't even see/list).
+        if (!$user->isSuperUser() && !$user->hasRole('admin')) {
             return response()->json([
                 'message' => 'شما مجوز دسترسی به این بخش را ندارید',
             ], 403);
@@ -122,6 +124,7 @@ class SessionController extends Controller
                 'oauth_access_tokens.created_at',
                 'oauth_access_tokens.updated_at',
                 'oauth_access_tokens.expires_at',
+                'oauth_access_tokens.last_used_at',
                 'users.fname',
                 'users.lname',
                 'users.role',
@@ -138,6 +141,7 @@ class SessionController extends Controller
                 'browser_fingerprint' => $session->browser_fingerprint,
                 'login_at' => $session->created_at,
                 'updated_at' => $session->updated_at,
+                'last_used_at' => $session->last_used_at,
                 'expires_at' => $session->expires_at,
                 'is_current' => $session->token_id === $currentTokenId,
             ];
@@ -207,6 +211,7 @@ class SessionController extends Controller
             'platform' => $browser['platform'],
             'login_at' => $session->created_at,
             'updated_at' => $session->updated_at,
+            'last_used_at' => $session->last_used_at ?? null,
             'expires_at' => $session->expires_at,
             'is_current' => $isCurrent,
         ];

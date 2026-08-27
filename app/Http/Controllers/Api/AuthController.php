@@ -108,6 +108,7 @@ class AuthController extends Controller
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
                     'browser_fingerprint' => $request->input('browser_fingerprint'),
+                    'last_used_at' => now(),
                 ]);
         }
 
@@ -239,6 +240,16 @@ class AuthController extends Controller
             'password' => Hash::make($request->new_password),
         ]);
 
+        // Revoke every other active session — but deliberately NOT the current
+        // one, since the user is still authenticated here and shouldn't be
+        // logged out by their own password change. A stolen/leaked session
+        // elsewhere is killed the moment the legitimate user changes their
+        // password (unlike resetPassword below, which has no "current" token
+        // to spare and revokes everything).
+        $user->tokens()
+            ->where('id', '!=', $request->user()->token()->id)
+            ->update(['revoked' => 1]);
+
         return response()->json([
             'message' => 'رمز عبور با موفقیت تغییر یافت',
         ]);
@@ -320,6 +331,12 @@ class AuthController extends Controller
                 $user->forceFill([
                     'password' => Hash::make($password),
                 ])->save();
+
+                // No "current" session to spare here — the user isn't
+                // authenticated during a forgot-password reset, so every
+                // existing token (including one an attacker who triggered
+                // this reset might hold) is revoked without exception.
+                $user->tokens()->update(['revoked' => 1]);
             }
         );
 

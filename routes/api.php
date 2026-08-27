@@ -64,8 +64,55 @@ Route::prefix('v1')->group(function () {
 // ==================== Media Upload (outside auth:api to avoid Passport PSR-7 file upload bug) ====================
 Route::post('/media/upload', [\App\Http\Controllers\Api\MediaController::class, 'upload']);
 
+// Public media stream — same file Apache serves at /storage/..., but routed
+// through the API so the global CORS middleware adds Access-Control-Allow-*
+// headers (EmbedPDF fetches the PDF from the browser, which enforces CORS).
+Route::get('/media/{id}/stream', [\App\Http\Controllers\Api\MediaController::class, 'stream']);
+
+// ==================== Public Media Listing (no auth required) ====================
+// For public smart-page widgets (file-manager / gallery). Files live in public
+// storage and are already reachable without auth, so listing them is safe.
+Route::get('/media/public', [\App\Http\Controllers\Api\MediaController::class, 'publicIndex']);
+Route::prefix('v1')->group(function () {
+    Route::get('/media/public', [\App\Http\Controllers\Api\MediaController::class, 'publicIndex']);
+});
+
+// ==================== Public Form Routes (no auth required) ====================
+// Rate-limited since submission/upload are unauthenticated write endpoints.
+Route::get('/forms/public', [\App\Http\Controllers\Api\FormController::class, 'publicIndex']);
+Route::get('/forms/slug/{slug}/public', [\App\Http\Controllers\Api\FormController::class, 'publicShowBySlug']);
+Route::get('/forms/slug/{slug}/embed', [\App\Http\Controllers\Api\FormController::class, 'publicShowBySlugForEmbed']);
+Route::get('/forms/share/{slug}/public', [\App\Http\Controllers\Api\FormController::class, 'publicShowByShareSlug']);
+Route::post('/forms/share/{slug}/unlock', [\App\Http\Controllers\Api\FormController::class, 'unlockShareLink'])
+    ->middleware('throttle:8,1');
+Route::post('/forms/{id}/submit', [\App\Http\Controllers\Api\FormController::class, 'submit'])
+    ->whereNumber('id')->middleware('throttle:10,1');
+Route::post('/forms/{id}/upload-answer-file', [\App\Http\Controllers\Api\FormController::class, 'uploadAnswerFile'])
+    ->whereNumber('id')->middleware('throttle:20,1');
+// «فیلد امنیتی» (security field) — تولید/بررسی چالش کپچا برای فرم‌ساز
+Route::post('/forms/security-challenge/generate', [\App\Http\Controllers\Api\SecurityChallengeController::class, 'generate'])
+    ->middleware('throttle:30,1');
+Route::post('/forms/security-challenge/verify', [\App\Http\Controllers\Api\SecurityChallengeController::class, 'verify'])
+    ->middleware('throttle:30,1');
+
+// ==================== Public Site Navigation Routes (no auth required) ====================
+// Menus of the public site theme (Navigation Builder) — separate from the
+// admin sidebar's NavigationController. Single aggregate call + per-location call.
+Route::get('/navigation/public', [\App\Http\Controllers\Api\SiteNavigationController::class, 'publicIndex']);
+Route::get('/navigation/{location}/public', [\App\Http\Controllers\Api\SiteNavigationController::class, 'publicByLocation']);
+
+// ==================== Public Smart Page Routes (no auth required) ====================
+// Order matters: literal /smart-pages/slug/... and /.../children/public MUST be
+// registered before the generic /smart-pages/{parentSlug}/{childKey}/public.
+Route::get('/smart-pages/public', [\App\Http\Controllers\Api\SmartPageController::class, 'publicIndex']);
+Route::get('/smart-pages/slug/{slug}/public', [\App\Http\Controllers\Api\SmartPageController::class, 'publicShowBySlug']);
+Route::get('/smart-pages/{parentSlug}/children/public', [\App\Http\Controllers\Api\SmartPageController::class, 'publicChildren']);
+Route::get('/smart-pages/{parentSlug}/{childKey}/public', [\App\Http\Controllers\Api\SmartPageController::class, 'publicShowChild']);
+
 // ==================== Authenticated Routes ====================
-Route::group(['middleware' => 'auth:api'], function () {
+// idle.timeout MUST come after auth:api — it needs $request->user()->token()
+// already resolved by Passport's guard.
+Route::group(['middleware' => ['auth:api', 'idle.timeout']], function () {
     foreach (glob(__DIR__ . '/api/*.php') as $file_name) {
         include_once $file_name;
     }

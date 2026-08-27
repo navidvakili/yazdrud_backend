@@ -38,9 +38,13 @@ class NewsController extends Controller
             });
         }
 
-        // Filter by category_id
+        // Filter by category_id (matches primary category OR any of category_ids)
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->input('category_id'));
+            $categoryId = (int) $request->input('category_id');
+            $query->where(function ($q) use ($categoryId) {
+                $q->where('category_id', $categoryId)
+                  ->orWhereJsonContains('category_ids', $categoryId);
+            });
         }
 
         // Filter by status
@@ -109,12 +113,17 @@ class NewsController extends Controller
             'title' => 'required|string|max:300',
             'summary' => 'nullable|string',
             'content' => 'required_if:is_photo_report,false|nullable|string',
-            'category_id' => 'required|integer|exists:news_categories,id',
+            'language' => 'nullable|string|max:10',
+            'lang' => 'nullable|string|max:10',
+            'category_id' => 'nullable|integer|exists:news_categories,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:news_categories,id',
             'image_url' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
             'target_audience' => 'nullable|in:all,students,professors,staff',
             'is_pinned' => 'boolean',
             'comments_enabled' => 'boolean',
+            'comments_mode' => 'nullable|in:auto,approval,disabled',
             'is_photo_report' => 'boolean',
             'photo_report_images' => 'nullable|array',
             'photo_report_images.*.url' => 'required_with:photo_report_images|string|max:1000',
@@ -123,14 +132,15 @@ class NewsController extends Controller
             'tags.*' => 'string',
             'attachments' => 'nullable|array',
             'published_at' => 'nullable|date',
-            'lang' => 'nullable|string|max:10',
         ]);
 
-        // Validate category access
-        if (!$this->canAccessCategory($request, 'news', 'create', (int) $validated['category_id'])) {
-            return response()->json([
-                'message' => 'شما دسترسی ایجاد خبر در این دسته‌بندی را ندارید',
-            ], 403);
+        // Validate category access (only when a primary category is set)
+        if (($validated['category_id'] ?? null) !== null) {
+            if (!$this->canAccessCategory($request, 'news', 'create', (int) $validated['category_id'])) {
+                return response()->json([
+                    'message' => 'شما دسترسی ایجاد خبر در این دسته‌بندی را ندارید',
+                ], 403);
+            }
         }
 
         $user = $request->user();
@@ -140,18 +150,26 @@ class NewsController extends Controller
             $validated['status'] = 'draft';
         }
 
+        $categoryIds = $this->normalizeCategoryIds($validated);
+        $primaryCategoryId = $validated['category_id'] ?? null;
+        if ($primaryCategoryId === null && !empty($categoryIds)) {
+            $primaryCategoryId = $categoryIds[0];
+        }
+
         $news = News::create([
             'language' => \App\Models\Language::resolveRequest($request),
             'title' => $validated['title'],
             'summary' => $validated['summary'] ?? null,
             'content' => $validated['content'] ?? '',
-            'category_id' => $validated['category_id'] ?? null,
+            'category_id' => $primaryCategoryId,
+            'category_ids' => $categoryIds,
             'author_username' => $user->username,
             'author_name' => trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')),
             'author_role' => $user->role ?? null,
             'image_url' => $this->normalizeMediaUrlValue($validated['image_url'] ?? null),
             'is_pinned' => $validated['is_pinned'] ?? false,
-            'comments_enabled' => $validated['comments_enabled'] ?? true,
+            'comments_enabled' => $this->resolveCommentsEnabled($validated),
+            'comments_mode' => $validated['comments_mode'] ?? 'approval',
             'is_photo_report' => $validated['is_photo_report'] ?? false,
             'photo_report_images' => $this->normalizePhotoReportImages($validated['photo_report_images'] ?? []),
             'status' => $validated['status'],
@@ -184,12 +202,17 @@ class NewsController extends Controller
             'title' => 'sometimes|required|string|max:300',
             'summary' => 'nullable|string',
             'content' => 'nullable|string',
-            'category_id' => 'sometimes|required|integer|exists:news_categories,id',
+            'language' => 'nullable|string|max:10',
+            'lang' => 'nullable|string|max:10',
+            'category_id' => 'sometimes|nullable|integer|exists:news_categories,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:news_categories,id',
             'image_url' => 'nullable|string|max:1000',
             'status' => 'sometimes|required|in:published,draft,archived',
             'target_audience' => 'nullable|in:all,students,professors,staff',
             'is_pinned' => 'boolean',
             'comments_enabled' => 'boolean',
+            'comments_mode' => 'nullable|in:auto,approval,disabled',
             'is_photo_report' => 'boolean',
             'photo_report_images' => 'nullable|array',
             'photo_report_images.*.url' => 'required_with:photo_report_images|string|max:1000',
@@ -238,6 +261,23 @@ class NewsController extends Controller
 
         if (array_key_exists('attachments', $validated)) {
             $validated['attachments'] = $this->normalizeAttachments($validated['attachments'] ?? []);
+        }
+
+        // Normalize multi-category: sync category_ids, keep category_id in sync
+        if (array_key_exists('category_ids', $validated) || array_key_exists('category_id', $validated)) {
+            $categoryIds = $this->normalizeCategoryIds($validated);
+            $validated['category_ids'] = $categoryIds;
+            if (array_key_exists('category_id', $validated) && $validated['category_id'] === null && !empty($categoryIds)) {
+                $validated['category_id'] = $categoryIds[0];
+            }
+            if (!array_key_exists('category_id', $validated)) {
+                $validated['category_id'] = !empty($categoryIds) ? $categoryIds[0] : $news->category_id;
+            }
+        }
+
+        // Normalize comments mode -> comments_enabled compatibility
+        if (array_key_exists('comments_mode', $validated)) {
+            $validated['comments_enabled'] = $validated['comments_mode'] !== 'disabled';
         }
 
         $news->update($validated);
@@ -571,16 +611,96 @@ class NewsController extends Controller
         return $restrictedCategories->contains($categoryId);
     }
 
+    // ==================== CATEGORY / COMMENTS MODE HELPERS ====================
+
+    /**
+     * Normalize the effective category ID list from validated input.
+     * Prefers category_ids array, falls back to category_id, defaults to empty.
+     */
+    private function normalizeCategoryIds(array $validated): array
+    {
+        $ids = [];
+        if (isset($validated['category_ids']) && is_array($validated['category_ids'])) {
+            foreach ($validated['category_ids'] as $id) {
+                if (is_numeric($id)) {
+                    $ids[] = (int) $id;
+                }
+            }
+        } elseif (isset($validated['category_id']) && $validated['category_id'] !== null) {
+            $ids[] = (int) $validated['category_id'];
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Resolve comments_enabled boolean from comments_mode (and legacy flag).
+     */
+    private function resolveCommentsEnabled(array $validated): bool
+    {
+        if (isset($validated['comments_mode'])) {
+            return $validated['comments_mode'] !== 'disabled';
+        }
+
+        return $validated['comments_enabled'] ?? true;
+    }
+
+    /**
+     * Get the effective category IDs for a news record (JSON + legacy column).
+     */
+    private function effectiveCategoryIds(News $news): array
+    {
+        $ids = is_array($news->category_ids) ? $news->category_ids : [];
+        $ids = array_map('intval', $ids);
+
+        if ($news->category_id !== null) {
+            $primary = (int) $news->category_id;
+            if (!in_array($primary, $ids, true)) {
+                array_unshift($ids, $primary);
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Resolve category names for a list of category IDs (cached per request).
+     */
+    private array $categoryNameCache = [];
+
+    private function categoryNames(array $ids): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (empty($ids)) {
+            return [];
+        }
+
+        $missing = array_diff($ids, array_keys($this->categoryNameCache));
+        if (!empty($missing)) {
+            $rows = \App\Models\NewsCategory::whereIn('id', $missing)->pluck('name', 'id');
+            foreach ($rows as $id => $name) {
+                $this->categoryNameCache[(int) $id] = $name;
+            }
+        }
+
+        return array_map(fn($id) => $this->categoryNameCache[$id] ?? null, $ids);
+    }
+
     // ==================== FORMATTERS ====================
 
-    private function formatNews(News $news): array
+    public function formatNews(News $news): array
     {
+        $categoryIds = $this->effectiveCategoryIds($news);
+
         return [
             'id' => $news->id,
+            'language' => $news->language,
             'title' => $news->title,
             'summary' => $news->summary,
             'category_id' => $news->category_id !== null ? (int) $news->category_id : null,
+            'category_ids' => $categoryIds,
             'category_name' => $news->category?->name,
+            'category_names' => $this->categoryNames($categoryIds),
             'category_color' => $news->category?->color,
             'author_username' => $news->author_username,
             'author_name' => $news->author_name,
@@ -589,6 +709,7 @@ class NewsController extends Controller
             'likes_count' => (int) ($news->likes_count ?? 0),
             'is_pinned' => $news->is_pinned,
             'comments_enabled' => $news->comments_enabled ?? false,
+            'comments_mode' => $news->comments_mode ?? 'approval',
             'is_photo_report' => $news->is_photo_report ?? false,
             'comments_count' => (int) ($news->approved_comments_count ?? 0),
             'status' => $news->status,

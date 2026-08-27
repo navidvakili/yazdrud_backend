@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'support.only' => \App\Http\Middleware\EnsureSupportUser::class,
+            'idle.timeout' => \App\Http\Middleware\EnsureTokenNotIdle::class,
         ]);
 
         // Global middleware — CORS handled before any route matching,
@@ -36,6 +38,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // For API routes, don't redirect to a "login" route on auth failure — return 401 JSON instead
         $middleware->redirectGuestsTo(fn () => null);
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        // Expired/revoked oauth_access_tokens rows are inert but never
+        // auto-deleted — sweep them daily so the table doesn't grow forever.
+        $schedule->command('passport:purge --hours=24')->daily();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

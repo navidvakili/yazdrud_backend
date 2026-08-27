@@ -27,6 +27,12 @@ class MediaFileObserver
         $this->bumpCacheVersion();
     }
 
+    public function updated(MediaFile $mediaFile): void
+    {
+        // Title/description/folder edits change what the (public) listing serves
+        $this->bumpCacheVersion();
+    }
+
     public function deleted(MediaFile $mediaFile): void
     {
         $this->bumpCacheVersion();
