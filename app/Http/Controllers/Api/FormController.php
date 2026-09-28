@@ -719,7 +719,7 @@ class FormController extends Controller
 
         return $request->validate([
             'title'       => "{$req}|string|max:300",
-            'slug'        => ["{$req}", 'string', 'max:191', 'regex:/^[a-z0-9\-]+$/', $slugUnique],
+            'slug'        => [...explode('|', $req), 'string', 'max:191', 'regex:/^[a-z0-9\-]+$/', $slugUnique],
             'description' => 'nullable|string',
             'type'        => 'sometimes|required|in:form,survey,quiz,registration',
             'status'      => 'sometimes|required|in:draft,published,paused,archived,page_builder_only',
