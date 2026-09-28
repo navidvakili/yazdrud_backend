@@ -595,6 +595,16 @@ class FormController extends Controller
     }
 
     /**
+     * Hard security ceiling for anonymous form-answer uploads — no extension outside
+     * these lists is EVER accepted, even if a field's own `validation.allowedExtensions`
+     * (set by an admin in the form builder) contains something else (typo, bad config,
+     * or a tampered request). The admin setting can only NARROW this list, never widen it.
+     * Deliberately excludes scripts/executables and svg/html (XSS via inline script).
+     */
+    private const SAFE_FILE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'txt', 'zip', 'rar', '7z'];
+    private const SAFE_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+    /**
      * Public, unauthenticated upload for a file/image/signature answer field.
      * Strict mime/size allowlist and per-IP rate limiting (route middleware) —
      * no precedent for anonymous uploads exists elsewhere in this codebase, so
@@ -610,7 +620,35 @@ class FormController extends Controller
         }
 
         $request->validate([
-            'file' => 'required|file|max:5120|mimes:jpg,jpeg,png,pdf',
+            'field_id' => 'nullable|string',
+        ]);
+
+        $field = collect($form->fields ?? [])->firstWhere('id', $request->input('field_id'));
+        $fieldType = $field['type'] ?? 'file';
+        $fieldValidation = $field['validation'] ?? [];
+
+        $masterList = $fieldType === 'image' ? self::SAFE_IMAGE_EXTENSIONS : self::SAFE_FILE_EXTENSIONS;
+
+        // Admin-configured extensions (form builder) are only ever a NARROWING of the
+        // master safe list above — never a way to widen it to something dangerous.
+        $configured = collect($fieldValidation['allowedExtensions'] ?? [])
+            ->map(fn ($e) => strtolower(ltrim(trim((string) $e), '.')))
+            ->filter()
+            ->values();
+
+        $effectiveExtensions = $configured->isEmpty()
+            ? $masterList
+            : array_values(array_intersect($configured->all(), $masterList));
+
+        if (empty($effectiveExtensions)) {
+            return response()->json(['message' => 'فرمت مجاز برای این فیلد به‌درستی تنظیم نشده است. لطفاً با پشتیبانی تماس بگیرید.'], 422);
+        }
+
+        $configuredMaxMb = is_numeric($fieldValidation['maxFileSizeMb'] ?? null) ? (float) $fieldValidation['maxFileSizeMb'] : 10;
+        $maxKb = (int) min($configuredMaxMb * 1024, 102400); // 100MB hard ceiling, same as the staff media uploader
+
+        $request->validate([
+            'file' => ['required', 'file', "max:{$maxKb}", 'mimes:' . implode(',', $effectiveExtensions)],
         ]);
 
         $file = $request->file('file');
