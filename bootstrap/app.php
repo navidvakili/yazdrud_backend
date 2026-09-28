@@ -99,9 +99,22 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (Throwable $e, Request $request) {
             if ($request->is('api/*')) {
                 $statusCode = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
-                return response()->json([
+                $payload = [
                     'message' => 'خطای داخلی سرور. لطفاً با پشتیبانی تماس بگیرید.',
-                ], $statusCode >= 400 && $statusCode < 600 ? $statusCode : 500);
+                ];
+
+                // Admin/support users get the real cause in the JSON body (visible in
+                // DevTools → Network) so production failures can be diagnosed without log access.
+                try {
+                    if ($request->user('api')?->hasAnyRole(['admin', 'support'])) {
+                        $payload['exception'] = class_basename($e) . ': ' . $e->getMessage();
+                        $payload['at'] = basename($e->getFile()) . ':' . $e->getLine();
+                    }
+                } catch (Throwable) {
+                    // never let diagnostics break the error response itself
+                }
+
+                return response()->json($payload, $statusCode >= 400 && $statusCode < 600 ? $statusCode : 500);
             }
         });
     })->create();
