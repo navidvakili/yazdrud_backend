@@ -543,6 +543,13 @@ class FormController extends Controller
             'respondent_email'        => 'nullable|email|max:191',
             'respondent_role'         => 'nullable|string|max:100',
             'completion_time_seconds' => 'nullable|integer|min:0',
+        ], [
+            'answers.required'                 => 'لطفاً حداقل به یک سؤال از فرم پاسخ دهید.',
+            'answers.array'                    => 'قالب پاسخ‌های ارسالی نامعتبر است.',
+            'respondent_name.string'           => 'نام واردشده نامعتبر است.',
+            'respondent_name.max'              => 'نام واردشده بیش از حد مجاز طولانی است.',
+            'respondent_email.email'           => 'ایمیل واردشده معتبر نیست.',
+            'completion_time_seconds.integer'  => 'مدت‌زمان تکمیل فرم نامعتبر است.',
         ]);
 
         $securityErrors = $this->validateSecurityFields($form, $validated['security_challenges'] ?? []);
